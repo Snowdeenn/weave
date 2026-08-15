@@ -1,0 +1,12 @@
+[package]
+name = "weave"
+version = "0.1.0"
+edition = "2024"
+description = "Ergonomic work-stealing thread pool with parallel iterators"
+
+[dependencies]
+tracing = "0.1"
+num_cpus = "1"
+
+[dev-dependencies]
+tracing-subscriber = "0.3"
