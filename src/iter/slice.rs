@@ -9,26 +9,29 @@ pub struct SliceIter<'a, T> {
 impl<'a, T: Send + Sync> ParallelIterator for SliceIter<'a, T> {
     type Item = &'a T;
 
-    fn drive_to<C: super::Consumer<Self::Item>>(self, mut consumer: C) {
+    fn drive_to<C: super::Consumer<Self::Item>>(self, mut consumer: C) -> C::Result {
         let slice_len = self.slice.len();
         if slice_len <= super::MIN_CHUNK_SIZE {
             for item in self.slice {
                 consumer.consume(item);
             }
-            consumer.finish();
+            consumer.finish()
         } else {
-            let mid = self.slice.len() / 2;
+            let mid = slice_len / 2;
             let pool = current_pool().unwrap(); // TODO: Mieux gerer l'erreur
             let (left, right) = self.split_at(mid);
             let (lc, rc) = consumer.split();
+
             // SAFETY : drive_to attend que les deux moitiés soient finies via pool.join()
             // donc les données référencées par C sont garanties vivantes
-            let left_job: Box<dyn FnOnce() + Send + 'static> = unsafe {
+            let left_job: Box<dyn FnOnce() -> C::Result + Send + 'static> = unsafe {
                 std::mem::transmute(
-                    Box::new(move || left.drive_to(lc)) as Box<dyn FnOnce() + Send + '_>
+                    Box::new(move || left.drive_to(lc)) as Box<dyn FnOnce() -> C::Result + Send + '_>
                 )
             };
-            pool.join(left_job, move || right.drive_to(rc));
+            
+            let (left_res, right_res) = pool.join(left_job, move || right.drive_to(rc));
+            C::combine(left_res, right_res)
         }
     }
 }
