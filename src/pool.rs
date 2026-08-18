@@ -83,18 +83,28 @@ impl ThreadPool {
         self.shared.condvar.notify_one();
     }
 
-    pub fn join<T, U, F1, F2>(&self, f1: F1, f2: F2) -> (T, U)
+    pub fn join<'a, T, U, F1, F2>(&self, f1: F1, f2: F2) -> (T, U)
     where
-        F1: FnOnce() -> T + Send + 'static,
+        F1: FnOnce() -> T + Send,
         F2: FnOnce() -> U,
-        T: Send + 'static,
+        T: Send + 'a,
     {
         let (state, handle) = JobState::<T>::channel();
-        let job = Job::new(move || {
-            let result = f1();
-            state.complete(result);
-        });
-        self.shared.global_queue.lock().unwrap().push_back(job);
+
+        // SAFETY : join() est bloquant — on attend que f1 soit finie avant de retourner.
+        // Les données capturées par f1 sont garanties vivantes pendant toute l'exécution.
+        let f1: Box<dyn FnOnce() -> T + Send + 'static> =
+            unsafe { std::mem::transmute(Box::new(f1) as Box<dyn FnOnce() -> T + Send + '_>) };
+
+        let job_fn = move || {
+            state.complete(f1());
+        };
+
+        // SAFETY : join() est bloquant — les données capturées sont garanties vivantes
+        let job_raw: Box<dyn FnOnce() + Send + 'static> =
+            unsafe { std::mem::transmute(Box::new(job_fn) as Box<dyn FnOnce() + Send + '_>) };
+            
+        self.shared.global_queue.lock().unwrap().push_back(Job::from_raw(job_raw));
         self.shared.condvar.notify_one();
         let result_f2 = f2();
         let result_f1 = handle.join();
