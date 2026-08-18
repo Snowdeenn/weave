@@ -27,6 +27,13 @@ impl Job {
             label: None,
         }
     }
+    pub(crate) fn from_raw(task: Box<dyn FnOnce() + Send + 'static>) -> Self {
+    Self {
+        priority: Priority::Normal,
+        task,
+        label: None,
+    }
+}
     pub fn set_priority(mut self, priority: Priority) -> Self {
         self.priority = priority;
         self
