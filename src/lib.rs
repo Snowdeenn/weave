@@ -6,9 +6,18 @@ mod builder;
 mod scope;
 mod storage;
 mod cache_padded;
-mod iter;
+mod iterator;
 
+pub use job::*;
+pub use error::*;
+pub use handle::*;
+pub use pool::*;
+pub use scope::*;
+pub use builder::ThreadPoolBuidler;
 
+pub mod iter {
+    pub use crate::iterator::*;
+}
 // Adapté de Rayon (MIT) — https://github.com/rayon-rs/rayon
 struct SendPtr<T>(*const T);
 
