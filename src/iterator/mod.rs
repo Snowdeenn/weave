@@ -3,6 +3,7 @@ use crate::iterator::chunk_aligned::ChunksAligned;
 pub mod adaptator;
 pub mod slice;
 pub mod chunk_aligned;
+pub mod range;
 
 const MIN_CHUNK_SIZE: usize = 512;
 

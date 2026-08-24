@@ -49,6 +49,6 @@ impl<'a, T: Send + Sync> IntoParallelIterator for SliceIter<'a, T> {
     type Item = &'a T;
     type Iter = SliceIter<'a, T>;
     fn parallelize(self) -> Self::Iter {
-        SliceIter { slice: &[] }
+        SliceIter { slice: &[]  }
     }
 }
