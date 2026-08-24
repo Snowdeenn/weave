@@ -1,3 +1,5 @@
+use crate::iterator::chunk_aligned::ChunksAligned;
+
 pub mod adaptator;
 pub mod slice;
 pub mod chunk_aligned;
@@ -57,4 +59,16 @@ pub trait ParallelIterator: Sized + Send {
 pub trait IndexedParallelIterator: ParallelIterator {
     fn len(&self) -> usize;
     fn split_at(self, index: usize) -> (Self, Self);
+    fn chunk_aligned<'a>(self, chunk_size: usize) -> ChunksAligned<'a, Self>
+    where 
+        Self: Sized
+    {
+        ChunksAligned::new(chunk_size)
+    }
+}
+
+pub trait IntoParallelIterator {
+    type Iter: ParallelIterator<Item = Self::Item>;
+    type Item: Send;
+    fn parallelize(self) -> Self::Iter;
 }

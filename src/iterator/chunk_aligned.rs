@@ -7,6 +7,12 @@ pub struct ChunksAligned<'a, T> {
     chunk_size: usize,
 }
 
+impl<'a, T> ChunksAligned<'a, T> {
+    pub fn new(chunk_size: usize) -> Self {
+        Self { slice: &[], chunk_size }
+    }
+}
+
 impl<'a, T> ParallelIterator for ChunksAligned<'a, T>
 where
     T: Send + Sync,
@@ -14,7 +20,7 @@ where
     type Item = &'a [T];
     fn drive_to<C: Consumer<Self::Item>>(self, mut consumer: C) -> C::Result {
         let slice_len = self.slice.len();
-        if slice_len <= MIN_CHUNK_SIZE {
+        if self.len() <= MIN_CHUNK_SIZE {
             for chunk in self.slice.chunks(self.chunk_size) {
                 consumer.consume(chunk);
             }

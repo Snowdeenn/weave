@@ -1,11 +1,12 @@
 use crate::{
-    iter::{IndexedParallelIterator, ParallelIterator},
+    iterator::{IndexedParallelIterator, ParallelIterator, IntoParallelIterator},
     pool::current_pool,
 };
 
 pub struct SliceIter<'a, T> {
     slice: &'a [T],
 }
+
 impl<'a, T: Send + Sync> ParallelIterator for SliceIter<'a, T> {
     type Item = &'a T;
 
@@ -42,5 +43,12 @@ impl<'a, T: Send + Sync> IndexedParallelIterator for SliceIter<'a, T> {
     fn split_at(self, index: usize) -> (Self, Self) {
         let (s1, s2) = self.slice.split_at(index);
         (Self { slice: s1 }, Self { slice: s2 })
+    }
+}
+impl<'a, T: Send + Sync> IntoParallelIterator for SliceIter<'a, T> {
+    type Item = &'a T;
+    type Iter = SliceIter<'a, T>;
+    fn parallelize(self) -> Self::Iter {
+        SliceIter { slice: &[] }
     }
 }
