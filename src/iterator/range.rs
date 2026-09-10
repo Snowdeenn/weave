@@ -1,65 +1,46 @@
+use super::*;
 use std::ops::Range;
-
-use crate::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
-
+/// Parallel source over an exclusive usize range.
 pub struct RangeIter {
     range: Range<usize>,
 }
-
+impl RangeIter {
+    /// Create a range source.
+    pub fn new(range: Range<usize>) -> Self {
+        Self { range }
+    }
+}
 impl ParallelIterator for RangeIter {
     type Item = usize;
-    fn drive_to<C: super::Consumer<Self::Item>>(self, mut consumer: C) -> C::Result {
-        let range_len = self.len();
-        if range_len <= super::MIN_CHUNK_SIZE {
-            for item in self.range {
-                consumer.consume(item);
-            }
-            consumer.finish()
-        } else {
-            let mid = range_len / 2;
-            let pool = crate::current_pool().unwrap(); // TODO: Mieux gerer l'erreur
-            let (left, right) = self.split_at(mid);
-            let (lc, rc) = consumer.split();
-
-            // SAFETY : drive_to attend que les deux moitiés soient finies via pool.join()
-            // donc les données référencées par C sont garanties vivantes
-            let left_job: Box<dyn FnOnce() -> C::Result + Send + 'static> = unsafe {
-                std::mem::transmute(Box::new(move || left.drive_to(lc))
-                    as Box<dyn FnOnce() -> C::Result + Send + '_>)
-            };
-
-            let (left_res, right_res) = pool.join(left_job, move || right.drive_to(rc));
-            C::combine(left_res, right_res)
-        }
+    fn drive_to<C: Consumer<usize>>(self, consumer: C) -> C::Result {
+        drive(self, consumer)
     }
 }
-
 impl IndexedParallelIterator for RangeIter {
     fn len(&self) -> usize {
-        if self.range.start < self.range.end {
-            self.range.end - self.range.start
-        } else {
-            0
-        }
+        self.range.end.saturating_sub(self.range.start)
     }
-
     fn split_at(self, index: usize) -> (Self, Self) {
+        assert!(index <= self.len(), "split index exceeds range length");
+        let end = self.range.end.max(self.range.start);
         let mid = self.range.start + index;
-        (
-            RangeIter {
-                range: self.range.start..mid,
-            },
-            RangeIter {
-                range: mid..self.range.end,
-            },
-        )
+        (Self::new(self.range.start..mid), Self::new(mid..end))
+    }
+    fn into_sequential(self) -> impl Iterator<Item = usize> {
+        self.range
     }
 }
-
-impl IntoParallelIterator for RangeIter {
+impl IntoParallelIterator for Range<usize> {
     type Item = usize;
     type Iter = RangeIter;
-    fn parallelize(self) -> Self::Iter {
-        RangeIter { range: self.range }
+    fn parallelize(self) -> RangeIter {
+        RangeIter::new(self)
+    }
+}
+impl IntoParallelIterator for RangeIter {
+    type Item = usize;
+    type Iter = Self;
+    fn parallelize(self) -> Self {
+        self
     }
 }

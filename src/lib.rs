@@ -1,45 +1,23 @@
-mod job;
+//! A work-stealing pool with scoped tasks and parallel iterators.
+//! Use [ThreadPool::install] to select a pool; iterators otherwise run sequentially.
+mod builder;
+mod cache_padded;
 mod error;
 mod handle;
+mod iterator;
+mod job;
 mod pool;
-mod builder;
 mod scope;
 mod storage;
-mod cache_padded;
-mod iterator;
 
-pub use job::*;
-pub use error::*;
-pub use handle::*;
-pub use pool::*;
-pub use scope::*;
-pub use builder::ThreadPoolBuidler;
-
+pub use builder::ThreadPoolBuilder;
+pub use error::BuildError;
+pub use handle::JoinHandle;
+pub use job::{IntoJob, Job, Priority};
+pub use pool::ThreadPool;
+pub use scope::Scope;
+pub use storage::local::{WorkerLocal, WorkerLocalError};
+/// Parallel iteration traits and extensions.
 pub mod iter {
     pub use crate::iterator::*;
 }
-// Adapté de Rayon (MIT) — https://github.com/rayon-rs/rayon
-struct SendPtr<T>(*const T);
-
-// SAFETY: !Send for raw pointers is not for safety, just as a lint
-unsafe impl<T: Send> Send for SendPtr<T> {}
-
-// SAFETY: !Sync for raw pointers is not for safety, just as a lint
-unsafe impl<T: Send> Sync for SendPtr<T> {}
-
-impl<T> SendPtr<T> {
-    // Helper to avoid disjoint captures of `send_ptr.0`
-    fn get(self) -> *const T {
-        self.0
-    }
-}
-
-// Implement Clone without the T: Clone bound from the derive
-impl<T> Clone for SendPtr<T> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-// Implement Copy without the T: Copy bound from the derive
-impl<T> Copy for SendPtr<T> {}

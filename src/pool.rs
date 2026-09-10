@@ -1,182 +1,261 @@
-use crate::SendPtr;
-use crate::builder::ThreadPoolBuidler;
-use crate::handle::JobState;
-use crate::job::{IntoJob, Job};
-use crate::scope::Scope;
-use std::cell::Cell;
-use std::collections::VecDeque;
-use std::sync::{Arc, Condvar, Mutex};
-
-thread_local! {
-    pub(crate) static WORKER_IDX: Cell<usize> = const {
-       Cell::new(0)
-    };
-    pub(crate) static CURRENT_POOL: Cell<*const ThreadPool> = const {
-       Cell::new(std::ptr::null())
-    };
+use crate::{BuildError, IntoJob, Job, JoinHandle, Priority, ThreadPoolBuilder, handle::JobState};
+use std::{
+    cell::RefCell,
+    collections::VecDeque,
+    panic::{AssertUnwindSafe, catch_unwind, resume_unwind},
+    sync::{Arc, Condvar, Mutex},
+};
+type Queues = [VecDeque<Job>; 3];
+struct Scheduler {
+    global: Queues,
+    local: Vec<Queues>,
+    pending: usize,
+    shutdown: bool,
+    steals: usize,
 }
 pub(crate) struct Shared {
-    global_queue: Mutex<VecDeque<Job>>,
-    condvar: Condvar,
-    shutdown: Mutex<bool>,
+    scheduler: Mutex<Scheduler>,
+    wake: Condvar,
 }
-
-pub struct Worker {
-    id: usize,
-    queue: Arc<Mutex<VecDeque<Job>>>,
+thread_local! {
+    static CURRENT: RefCell<Option<(Arc<Shared>, usize)>> = const { RefCell::new(None) };
 }
-
+pub(crate) fn current() -> Option<(Arc<Shared>, usize)> {
+    CURRENT.with(|c| c.borrow().clone())
+}
+pub(crate) fn help_current() -> bool {
+    current().is_some_and(|(shared, index)| shared.help(index))
+}
+impl Scheduler {
+    fn take(&mut self, index: usize) -> Option<Job> {
+        for priority in (0..3).rev() {
+            if let Some(job) = self.local[index][priority].pop_back() {
+                return Some(job);
+            }
+            if let Some(job) = self.global[priority].pop_front() {
+                return Some(job);
+            }
+            for offset in 1..self.local.len() {
+                let victim = (index + offset) % self.local.len();
+                if let Some(job) = self.local[victim][priority].pop_front() {
+                    self.steals += 1;
+                    return Some(job);
+                }
+            }
+        }
+        None
+    }
+}
+impl Shared {
+    pub(crate) fn enqueue(self: &Arc<Self>, job: Job) {
+        let local = current()
+            .filter(|(pool, _)| Arc::ptr_eq(pool, self))
+            .map(|(_, i)| i);
+        let mut scheduler = self.scheduler.lock().unwrap();
+        let priority = job.priority().index();
+        match local {
+            Some(i) => scheduler.local[i][priority].push_back(job),
+            None => scheduler.global[priority].push_back(job),
+        }
+        scheduler.pending += 1;
+        self.wake.notify_one();
+    }
+    fn execute(&self, job: Job) {
+        // No scheduler lock is held while user code runs.
+        if let Err(payload) = catch_unwind(AssertUnwindSafe(|| job.run())) {
+            discard(payload);
+        }
+        let mut scheduler = self.scheduler.lock().unwrap();
+        scheduler.pending -= 1;
+        self.wake.notify_all();
+    }
+    fn help(&self, index: usize) -> bool {
+        let job = self.scheduler.lock().unwrap().take(index);
+        if let Some(job) = job {
+            self.execute(job);
+            true
+        } else {
+            false
+        }
+    }
+    fn stop(&self) {
+        self.scheduler.lock().unwrap().shutdown = true;
+        self.wake.notify_all();
+    }
+}
+/// Fixed-size worker pool with local deques and stealing.
+/// External drop drains accepted work. Drop on an owned worker requests
+/// shutdown and lets workers finish asynchronously to avoid self-joining.
 pub struct ThreadPool {
-    shared: Arc<Shared>,
-    locals_queues: Vec<Arc<Mutex<VecDeque<Job>>>>,
+    pub(crate) shared: Arc<Shared>,
     threads: Vec<std::thread::JoinHandle<()>>,
-    _pin: std::marker::PhantomPinned,
+    num_threads: usize,
 }
-
 impl Default for ThreadPool {
     fn default() -> Self {
-        ThreadPoolBuidler::new().build()
+        ThreadPoolBuilder::new().build()
     }
 }
-
 impl ThreadPool {
+    /// Construct a pool; panics if construction fails.
     pub fn new(num_threads: usize, thread_name: String) -> Self {
-        let shared = Arc::new(Shared {
-            global_queue: Mutex::new(VecDeque::new()),
-            condvar: Condvar::new(),
-            shutdown: Mutex::new(false),
-        });
-        let mut locals_queues: Vec<Arc<Mutex<VecDeque<Job>>>> = Vec::with_capacity(num_threads);
-        // Créer le pool sur le heap pour avoir une adresse stable
-        let mut pool = Box::new(ThreadPool {
-            shared: Arc::clone(&shared),
-            locals_queues: locals_queues.clone(),
-            threads: Vec::with_capacity(num_threads),
-            _pin: std::marker::PhantomPinned,
-        });
-
-        let pool_ptr = SendPtr(&*pool);
-        for i in 0..num_threads {
-            locals_queues.push(Arc::new(Mutex::new(VecDeque::new())));
-            let shared = Arc::clone(&shared);
-            let local_queue = Arc::clone(&locals_queues[i]);
-            let worker = Worker {
-                id: i,
-                queue: local_queue,
-            };
-            let handle = std::thread::Builder::new()
-                .name(format!("{thread_name} - {i}"))
-                .spawn(move || worker_loop(worker, shared, pool_ptr))
-                .unwrap();
-            pool.threads.push(handle);
+        Self::try_new(num_threads, thread_name).expect("cannot build weave pool")
+    }
+    pub(crate) fn try_new(num_threads: usize, thread_name: String) -> Result<Self, BuildError> {
+        if num_threads == 0 {
+            return Err(BuildError::ZeroThreads);
         }
-
-        *pool
-    }
-
-    pub fn spawn_job(&self, job: impl IntoJob) {
-        self.shared
-            .global_queue
-            .lock()
-            .unwrap()
-            .push_back(job.into_job());
-        self.shared.condvar.notify_one();
-    }
-
-    pub fn join<'a, T, U, F1, F2>(&self, f1: F1, f2: F2) -> (T, U)
-    where
-        F1: FnOnce() -> T + Send,
-        F2: FnOnce() -> U,
-        T: Send + 'a,
-    {
-        let (state, handle) = JobState::<T>::channel();
-
-        // SAFETY : join() est bloquant — on attend que f1 soit finie avant de retourner.
-        // Les données capturées par f1 sont garanties vivantes pendant toute l'exécution.
-        let f1: Box<dyn FnOnce() -> T + Send + 'static> =
-            unsafe { std::mem::transmute(Box::new(f1) as Box<dyn FnOnce() -> T + Send + '_>) };
-
-        let job_fn = move || {
-            state.complete(f1());
+        if thread_name.contains('\0') {
+            return Err(BuildError::InvalidThreadName);
+        }
+        let shared = Arc::new(Shared {
+            scheduler: Mutex::new(Scheduler {
+                global: Default::default(),
+                local: (0..num_threads).map(|_| Queues::default()).collect(),
+                pending: 0,
+                shutdown: false,
+                steals: 0,
+            }),
+            wake: Condvar::new(),
+        });
+        let mut pool = Self {
+            shared,
+            threads: Vec::new(),
+            num_threads,
         };
-
-        // SAFETY : join() est bloquant — les données capturées sont garanties vivantes
-        let job_raw: Box<dyn FnOnce() + Send + 'static> =
-            unsafe { std::mem::transmute(Box::new(job_fn) as Box<dyn FnOnce() + Send + '_>) };
-            
-        self.shared.global_queue.lock().unwrap().push_back(Job::from_raw(job_raw));
-        self.shared.condvar.notify_one();
-        let result_f2 = f2();
-        let result_f1 = handle.join();
-
-        (result_f1, result_f2)
+        for index in 0..num_threads {
+            let shared = pool.shared.clone();
+            match std::thread::Builder::new()
+                .name(format!("{thread_name}-{index}"))
+                .spawn(move || worker_loop(shared, index))
+            {
+                Ok(thread) => pool.threads.push(thread),
+                Err(error) => return Err(BuildError::Spawn(error)),
+            }
+        }
+        Ok(pool)
     }
-
-    pub fn scope<'scope, F>(&'scope self, f: F)
-    where
-        F: FnOnce(&Scope<'scope>),
-    {
-        let scope = Scope::new(self);
-        f(&scope);
-        scope.wait_all();
+    /// Worker count.
+    pub fn num_threads(&self) -> usize {
+        self.num_threads
+    }
+    /// Count of actual transfers from another worker's local deque.
+    pub fn steal_count(&self) -> usize {
+        self.shared.scheduler.lock().unwrap().steals
+    }
+    /// Schedule detached work. The panic hook reports failures; workers survive.
+    pub fn spawn(&self, job: impl IntoJob) {
+        self.shared.enqueue(job.into_job());
+    }
+    /// Compatibility alias for [Self::spawn].
+    pub fn spawn_job(&self, job: impl IntoJob) {
+        self.spawn(job);
+    }
+    /// Schedule detached work with explicit priority.
+    pub fn spawn_with_priority(&self, priority: Priority, f: impl FnOnce() + Send + 'static) {
+        self.spawn(Job::new(f).set_priority(priority));
+    }
+    /// Submit work with a result handle.
+    pub fn submit<T: Send + 'static>(
+        &self,
+        f: impl FnOnce() -> T + Send + 'static,
+    ) -> JoinHandle<T> {
+        self.submit_with_priority(Priority::Normal, f)
+    }
+    /// Submit work with explicit priority.
+    pub fn submit_with_priority<T: Send + 'static>(
+        &self,
+        priority: Priority,
+        f: impl FnOnce() -> T + Send + 'static,
+    ) -> JoinHandle<T> {
+        let (state, handle) = JobState::channel();
+        self.spawn_with_priority(priority, move || {
+            state.complete(catch_unwind(AssertUnwindSafe(f)))
+        });
+        handle
+    }
+    /// Run two branches and wait for both, including on panic.
+    /// If both panic, the left panic is propagated.
+    pub fn join<A: Send, B>(
+        &self,
+        left: impl FnOnce() -> A + Send,
+        right: impl FnOnce() -> B,
+    ) -> (A, B) {
+        join_on(&self.shared, left, right)
+    }
+    /// Run borrowed code on this pool, enabling parallel iterator execution.
+    pub fn install<T: Send>(&self, f: impl FnOnce() -> T + Send) -> T {
+        if current().is_some_and(|(s, _)| Arc::ptr_eq(&s, &self.shared)) {
+            return f();
+        }
+        join_on(&self.shared, f, || ()).0
     }
 }
-
-fn worker_loop(worker: Worker, shared: Arc<Shared>, pool: SendPtr<ThreadPool>) {
-    WORKER_IDX.with(|cell| cell.set(worker.id));
-    CURRENT_POOL.with(|cell| cell.set(pool.get()));
+pub(crate) fn join_on<A: Send, B>(
+    shared: &Arc<Shared>,
+    left: impl FnOnce() -> A + Send,
+    right: impl FnOnce() -> B,
+) -> (A, B) {
+    let (state, handle) = JobState::channel();
+    let task: Box<dyn FnOnce() + Send + '_> =
+        Box::new(move || state.complete(catch_unwind(AssertUnwindSafe(left))));
+    // SAFETY: both branches are caught and the handle is always joined before
+    // returning or resuming a panic. All captured borrows have finished use.
+    let task = unsafe {
+        std::mem::transmute::<Box<dyn FnOnce() + Send + '_>, Box<dyn FnOnce() + Send + 'static>>(
+            task,
+        )
+    };
+    shared.enqueue(Job::from_raw(task, Priority::Normal));
+    let right = catch_unwind(AssertUnwindSafe(right));
+    let left = handle.join();
+    match (left, right) {
+        (Ok(a), Ok(b)) => (a, b),
+        (Err(panic), other) => {
+            discard(other);
+            resume_unwind(panic)
+        }
+        (Ok(value), Err(panic)) => {
+            discard(value);
+            resume_unwind(panic)
+        }
+    }
+}
+pub(crate) fn discard<T>(value: T) {
+    if let Err(panic) = catch_unwind(AssertUnwindSafe(|| drop(value))) {
+        std::mem::forget(panic);
+    }
+}
+fn worker_loop(shared: Arc<Shared>, index: usize) {
+    CURRENT.with(|c| *c.borrow_mut() = Some((shared.clone(), index)));
     loop {
         let job = {
-            worker
-                .queue
-                .lock()
-                .unwrap()
-                .pop_back()
-                .or_else(|| shared.global_queue.lock().unwrap().pop_front())
+            let mut scheduler = shared.scheduler.lock().unwrap();
+            loop {
+                if let Some(job) = scheduler.take(index) {
+                    break Some(job);
+                }
+                if scheduler.shutdown && scheduler.pending == 0 {
+                    break None;
+                }
+                scheduler = shared.wake.wait(scheduler).unwrap();
+            }
         };
-        if let Some(job) = job {
-            job.run();
-            continue;
+        match job {
+            Some(job) => shared.execute(job),
+            None => break,
         }
-
-        let mut shutdown = shared.shutdown.lock().unwrap();
-        if *shutdown {
-            break;
-        }
-
-        while !*shutdown {
-            shutdown = shared.condvar.wait(shutdown).unwrap();
-        }
-
-        if *shutdown {
-            break;
-        }
-        continue;
     }
+    CURRENT.with(|c| *c.borrow_mut() = None);
 }
-
-pub(crate) fn current_worker_idx() -> usize {
-    WORKER_IDX.with(|cell| cell.get())
-}
-pub(crate) fn current_pool() -> Option<&'static ThreadPool> {
-    CURRENT_POOL.with(|cell| {
-        let ptr = cell.get();
-        if ptr.is_null() {
-            None
-        } else {
-            Some(unsafe { &*ptr })
-        }
-    })
-}
-
 impl Drop for ThreadPool {
     fn drop(&mut self) {
-        let mut shutdown = self.shared.shutdown.lock().unwrap();
-        *shutdown = true;
-        self.shared.condvar.notify_all();
-
-        for handle in self.threads.drain(..) {
-            handle.join().unwrap();
+        self.shared.stop();
+        if current().is_some_and(|(s, _)| Arc::ptr_eq(&s, &self.shared)) {
+            return;
+        }
+        for thread in self.threads.drain(..) {
+            let _ = thread.join();
         }
     }
 }

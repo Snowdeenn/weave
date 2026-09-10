@@ -1,59 +1,64 @@
+use crate::pool::help_current;
 use std::sync::{Arc, Condvar, Mutex};
-
-struct Inner<T> {
-    result: Option<T>,
-    is_done: bool,
+pub(crate) struct JobState<T> {
+    result: Mutex<Option<std::thread::Result<T>>>,
+    ready: Condvar,
 }
-
-pub struct JobState<T> {
-    inner: Mutex<Inner<T>>,
-    condvar: Condvar,
-}
-
 impl<T> JobState<T> {
-    pub fn channel() -> (Arc<Self>, JoinHandle<T>) {
+    pub(crate) fn channel() -> (Arc<Self>, JoinHandle<T>) {
         let state = Arc::new(Self {
-            inner: Mutex::new(Inner {
-                result: None,
-                is_done: false,
-            }),
-            condvar: Condvar::new(),
+            result: Mutex::new(None),
+            ready: Condvar::new(),
         });
-        let handle = JoinHandle {
-            state: Arc::clone(&state),
-        };
-        (state, handle)
+        (
+            state.clone(),
+            JoinHandle {
+                state,
+                scoped_failure: None,
+            },
+        )
     }
-
-    pub fn complete(&self, value: T) {
-        // TODO: gestion panic
-        let mut inner = self.inner.lock().unwrap();
-        inner.result = Some(value);
-        inner.is_done = true;
-        
-        self.condvar.notify_one();
+    pub(crate) fn complete(&self, result: std::thread::Result<T>) {
+        *self.result.lock().unwrap() = Some(result);
+        self.ready.notify_all();
     }
 }
-
+/// Result of a submitted task. Dropping the handle does not cancel the task.
 pub struct JoinHandle<T> {
     state: Arc<JobState<T>>,
+    pub(crate) scoped_failure: Option<Arc<std::sync::atomic::AtomicBool>>,
 }
-
 impl<T> JoinHandle<T> {
+    /// Whether the task has returned or panicked.
     pub fn is_done(&self) -> bool {
-        let inner = self.state.inner.lock().unwrap();
-        inner.is_done
+        self.state.result.lock().unwrap().is_some()
     }
-
-    pub fn join(self) -> T {
-        let mut inner = self.state.inner.lock().unwrap();
-
-        while !inner.is_done {
-            inner = self.state.condvar.wait(inner).unwrap();
+    /// Wait for a value or the original panic payload.
+    /// Workers execute available work while waiting.
+    pub fn join(self) -> std::thread::Result<T> {
+        loop {
+            {
+                let mut result = self.state.result.lock().unwrap();
+                if let Some(value) = result.take() {
+                    if let Some(failed) = &self.scoped_failure {
+                        failed.store(false, std::sync::atomic::Ordering::Release);
+                    }
+                    return value;
+                }
+            }
+            if help_current() {
+                continue;
+            }
+            let result = self.state.result.lock().unwrap();
+            if result.is_some() {
+                continue;
+            }
+            drop(
+                self.state
+                    .ready
+                    .wait_timeout(result, std::time::Duration::from_millis(1))
+                    .unwrap(),
+            );
         }
-        inner
-            .result
-            .take()
-            .expect("Le résultat doit être présent lorsque is_done vaut true")
     }
 }

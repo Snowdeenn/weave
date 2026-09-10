@@ -1,29 +1,67 @@
-use crate::{cache_padded::CachePadded, pool::current_worker_idx};
-use std::sync::Mutex;
+use crate::{
+    ThreadPool,
+    cache_padded::CachePadded,
+    pool::{Shared, current},
+};
+use std::sync::{Arc, Mutex, TryLockError, Weak};
 
+/// Invalid access to worker-local storage.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WorkerLocalError {
+    /// The caller is not a worker of the storage's owning pool.
+    WrongPool,
+    /// This worker's value is already borrowed (including cooperative reentry).
+    AlreadyBorrowed,
+    /// A previous callback panicked while mutating this value.
+    Poisoned,
+}
+impl std::fmt::Display for WorkerLocalError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:?}")
+    }
+}
+impl std::error::Error for WorkerLocalError {}
+
+/// One independently initialized value per worker, bound to a specific pool.
 pub struct WorkerLocal<T> {
+    owner: Weak<Shared>,
     inner: Vec<CachePadded<Mutex<T>>>,
 }
-
 impl<T> WorkerLocal<T> {
-    pub fn new<F>(num_thread: usize, f: F) -> Self
-    where
-        F: Fn() -> T,
-    {
-        let mut inner = Vec::<CachePadded<Mutex<T>>>::with_capacity(num_thread);
-        for _ in 0..num_thread {
-            inner.push(CachePadded::new(Mutex::new(f())));
-        }
-        Self { inner }
+    /// Initialize one value for each worker, on the calling thread.
+    pub fn new(pool: &ThreadPool, f: impl Fn() -> T) -> Self {
+        Self::with_index(pool, |_| f())
     }
-    pub fn with<F>(&self, f: F)
-    where
-        F: FnOnce(&mut T),
-    {
-        // SAFETY : à appeler uniquement depuis un worker du pool.
-        // Depuis le thread principal, current_worker_idx() retourne 0 par défaut.
-        let current_thread = current_worker_idx();
-        let mut scratchpad = self.inner[current_thread].0.lock().unwrap();
-        f(&mut *scratchpad);
+    /// Initialize values using the worker index.
+    pub fn with_index(pool: &ThreadPool, f: impl Fn(usize) -> T) -> Self {
+        Self {
+            owner: Arc::downgrade(&pool.shared),
+            inner: (0..pool.num_threads())
+                .map(|i| CachePadded::new(Mutex::new(f(i))))
+                .collect(),
+        }
+    }
+    /// Access this worker's value. Panics on invalid or recursive access.
+    pub fn with<R>(&self, f: impl FnOnce(&mut T) -> R) -> R {
+        self.try_with(f).expect("invalid WorkerLocal access")
+    }
+    /// Access this worker's value without waiting on a recursive borrow.
+    pub fn try_with<R>(&self, f: impl FnOnce(&mut T) -> R) -> Result<R, WorkerLocalError> {
+        let (pool, i) = current().ok_or(WorkerLocalError::WrongPool)?;
+        if !Weak::ptr_eq(&self.owner, &Arc::downgrade(&pool)) {
+            return Err(WorkerLocalError::WrongPool);
+        }
+        let mut value = self.inner[i].0.try_lock().map_err(|e| match e {
+            TryLockError::WouldBlock => WorkerLocalError::AlreadyBorrowed,
+            TryLockError::Poisoned(_) => WorkerLocalError::Poisoned,
+        })?;
+        Ok(f(&mut value))
+    }
+    /// Consume the storage and recover every value, even if a callback panicked.
+    pub fn into_inner(self) -> Vec<T> {
+        self.inner
+            .into_iter()
+            .map(|value| value.0.into_inner().unwrap_or_else(|e| e.into_inner()))
+            .collect()
     }
 }

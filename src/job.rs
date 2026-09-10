@@ -1,73 +1,75 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+/// Scheduling preference for queued jobs, without preemption.
+/// Continuous high-priority work may starve lower priorities.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Priority {
+    /// Background work.
     Low,
+    /// Default preference.
+    #[default]
     Normal,
+    /// Preferred over normal and low work.
     High,
 }
-
-pub struct Id<Tag> {
-    pub index: usize,
-    pub generation: u32,
-    _phantom: std::marker::PhantomData<Tag>,
+impl Priority {
+    pub(crate) fn index(self) -> usize {
+        self as usize
+    }
 }
-pub struct JobTag;
-pub type JobId = Id<JobTag>;
-
+/// An owned detached task with scheduling metadata.
 pub struct Job {
-    priority: Priority,
     task: Box<dyn FnOnce() + Send + 'static>,
+    priority: Priority,
     label: Option<&'static str>,
 }
-
 impl Job {
+    /// Construct a normal-priority task.
     pub fn new(f: impl FnOnce() + Send + 'static) -> Self {
         Self {
-            priority: Priority::Normal,
             task: Box::new(f),
+            priority: Priority::Normal,
             label: None,
         }
     }
-    pub(crate) fn from_raw(task: Box<dyn FnOnce() + Send + 'static>) -> Self {
-    Self {
-        priority: Priority::Normal,
-        task,
-        label: None,
+    pub(crate) fn from_raw(task: Box<dyn FnOnce() + Send + 'static>, priority: Priority) -> Self {
+        Self {
+            task,
+            priority,
+            label: None,
+        }
     }
-}
+    /// Set priority.
     pub fn set_priority(mut self, priority: Priority) -> Self {
         self.priority = priority;
         self
     }
+    /// Attach a descriptive label.
     pub fn set_label(mut self, label: &'static str) -> Self {
         self.label = Some(label);
         self
     }
+    /// Execute immediately on the calling thread.
     pub fn run(self) {
         (self.task)()
     }
-
+    /// Read priority.
     pub fn priority(&self) -> Priority {
         self.priority
     }
+    /// Read label.
     pub fn label(&self) -> Option<&'static str> {
         self.label
     }
 }
-
+/// Conversion into a detached task.
 pub trait IntoJob {
+    /// Convert the value.
     fn into_job(self) -> Job;
 }
-
-impl<F> IntoJob for F
-where
-    F: FnOnce() + Send + 'static,
-{
-    #[inline]
+impl<F: FnOnce() + Send + 'static> IntoJob for F {
     fn into_job(self) -> Job {
         Job::new(self)
     }
 }
-
 impl IntoJob for Job {
     fn into_job(self) -> Job {
         self

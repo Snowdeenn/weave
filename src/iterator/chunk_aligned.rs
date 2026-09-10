@@ -1,67 +1,37 @@
-use crate::pool::current_pool;
-
 use super::*;
-
+/// Slice chunks split only at chunk boundaries. The final chunk may be short.
+/// This does not promise hardware SIMD alignment.
 pub struct ChunksAligned<'a, T> {
     slice: &'a [T],
     chunk_size: usize,
 }
-
 impl<'a, T> ChunksAligned<'a, T> {
-    pub fn new(chunk_size: usize) -> Self {
-        Self { slice: &[], chunk_size }
+    /// Create chunks; panics if chunk_size is zero.
+    pub fn new(slice: &'a [T], chunk_size: usize) -> Self {
+        assert!(chunk_size > 0, "chunk size must be nonzero");
+        Self { slice, chunk_size }
     }
 }
-
-impl<'a, T> ParallelIterator for ChunksAligned<'a, T>
-where
-    T: Send + Sync,
-{
+impl<'a, T: Sync> ParallelIterator for ChunksAligned<'a, T> {
     type Item = &'a [T];
-    fn drive_to<C: Consumer<Self::Item>>(self, mut consumer: C) -> C::Result {
-        let slice_len = self.slice.len();
-        if self.len() <= MIN_CHUNK_SIZE {
-            for chunk in self.slice.chunks(self.chunk_size) {
-                consumer.consume(chunk);
-            }
-            consumer.finish()
-        } else {
-            let mid = slice_len / 2;
-            let pool = current_pool().unwrap();
-            let (left, right) = self.split_at(mid);
-            let (lc, rc) = consumer.split();
-
-            // SAFETY : drive_to attend que les deux moitiés soient finies via pool.join()
-            // donc les données référencées par C sont garanties vivantes
-            let left_job: Box<dyn FnOnce() -> C::Result + Send + 'static> = unsafe {
-                std::mem::transmute(Box::new(move || left.drive_to(lc))
-                    as Box<dyn FnOnce() -> C::Result + Send + '_>)
-            };
-
-            let (left_res, right_res) = pool.join(left_job, move || right.drive_to(rc));
-            C::combine(left_res, right_res)
-        }
+    fn drive_to<C: Consumer<Self::Item>>(self, consumer: C) -> C::Result {
+        drive(self, consumer)
     }
 }
-
-impl<'a, T> IndexedParallelIterator for ChunksAligned<'a, T>
-where
-    T: Send + Sync,
-{
+impl<T: Sync> IndexedParallelIterator for ChunksAligned<'_, T> {
     fn len(&self) -> usize {
-        self.slice.len() / self.chunk_size
+        self.slice.len().div_ceil(self.chunk_size)
     }
     fn split_at(self, index: usize) -> (Self, Self) {
-        let (left, right) = self.slice.split_at(index * self.chunk_size);
+        assert!(index <= self.len(), "split index exceeds chunk count");
+        let offset = index.saturating_mul(self.chunk_size).min(self.slice.len());
+        let (left, right) = self.slice.split_at(offset);
         (
-            ChunksAligned {
-                slice: left,
-                chunk_size: self.chunk_size,
-            },
-            ChunksAligned {
-                slice: right,
-                chunk_size: self.chunk_size,
-            },
+            Self::new(left, self.chunk_size),
+            Self::new(right, self.chunk_size),
         )
+    }
+    fn into_sequential(self) -> impl Iterator<Item = Self::Item> {
+        self.slice.chunks(self.chunk_size)
     }
 }

@@ -1,76 +1,204 @@
-use std::sync::{
-    Arc, Condvar, Mutex,
-    atomic::{AtomicUsize, Ordering},
-};
-
 use crate::{
-    handle::{JobState, JoinHandle},
-    job::Job,
-    pool::ThreadPool,
+    Job, JoinHandle, Priority, ThreadPool,
+    handle::JobState,
+    pool::{Shared, discard, help_current},
 };
-
-pub(crate) struct ScopeWaker {
-    pub mutex: Mutex<()>,
-    pub condvar: Condvar,
+use std::{
+    marker::PhantomData,
+    panic::{AssertUnwindSafe, catch_unwind, resume_unwind},
+    sync::{
+        Arc, Condvar, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
+};
+type Panic = Box<dyn std::any::Any + Send + 'static>;
+struct GroupState {
+    pending: usize,
+    panic: Option<Panic>,
+    submissions: Vec<Arc<AtomicBool>>,
 }
-
-pub struct Scope<'scope> {
-    pool: &'scope ThreadPool,
-    pending: Arc<AtomicUsize>,
-    waker: Arc<ScopeWaker>,
+struct Group {
+    state: Mutex<GroupState>,
+    wake: Condvar,
 }
-
-impl<'scope> Scope<'scope> {
-    pub fn new(pool: &'scope ThreadPool) -> Self {
-        Self {
-            pool: pool,
-            pending: Arc::new(AtomicUsize::new(0)),
-            waker: Arc::new(ScopeWaker {
-                mutex: Mutex::new(()),
-                condvar: Condvar::new(),
+/// A region in which tasks may borrow external data.
+/// All tasks finish before the region exits, even if its body panics.
+/// Obtain a scope through [ThreadPool::scope].
+///
+/// Borrows created inside the body cannot outlive that body:
+/// ```compile_fail
+/// let pool = weave::ThreadPool::default();
+/// pool.scope(|s| {
+///     let temporary = String::from("too short");
+///     s.spawn(|| println!("{temporary}"));
+/// });
+/// ```
+///
+/// A handle cannot carry a borrow of a body-local value out of the scope:
+/// ```compile_fail
+/// let pool = weave::ThreadPool::default();
+/// let handle = pool.scope(|s| {
+///     let temporary = String::from("too short");
+///     s.submit(|| temporary.as_str())
+/// });
+/// println!("{}", handle.join().unwrap());
+/// ```
+///
+/// Descendant tasks cannot borrow their parent's temporary stack values:
+/// ```compile_fail
+/// let pool = weave::ThreadPool::default();
+/// pool.scope(|s| {
+///     s.spawn(|| {
+///         let temporary = String::from("too short");
+///         s.spawn(|| println!("{temporary}"));
+///     });
+/// });
+/// ```
+pub struct Scope<'scope, 'env: 'scope> {
+    shared: Arc<Shared>,
+    group: Arc<Group>,
+    scope: PhantomData<&'scope mut &'scope ()>,
+    env: PhantomData<&'env mut &'env ()>,
+}
+impl ThreadPool {
+    /// Execute a region of borrowing tasks, waiting for all descendants.
+    /// An unjoined failed submission causes a scope panic. A joined failure
+    /// belongs to its caller. A panic in the body takes precedence.
+    pub fn scope<'env, F, R>(&self, f: F) -> R
+    where
+        F: for<'scope> FnOnce(&'scope Scope<'scope, 'env>) -> R,
+    {
+        let scope = Scope {
+            shared: self.shared.clone(),
+            group: Arc::new(Group {
+                state: Mutex::new(GroupState {
+                    pending: 0,
+                    panic: None,
+                    submissions: Vec::new(),
+                }),
+                wake: Condvar::new(),
             }),
+            scope: PhantomData,
+            env: PhantomData,
+        };
+        let body = catch_unwind(AssertUnwindSafe(|| f(&scope)));
+        scope.wait();
+        let (panic, unjoined) = {
+            let mut state = scope.group.state.lock().unwrap();
+            (
+                state.panic.take(),
+                state
+                    .submissions
+                    .iter()
+                    .any(|failed| failed.load(Ordering::Acquire)),
+            )
+        };
+        match body {
+            Err(payload) => {
+                discard(panic);
+                resume_unwind(payload)
+            }
+            Ok(value) => {
+                if let Some(payload) = panic {
+                    discard(value);
+                    resume_unwind(payload);
+                }
+                if unjoined {
+                    discard(value);
+                    panic!("an unjoined scoped task panicked");
+                }
+                value
+            }
         }
     }
+}
+impl<'scope, 'env> Scope<'scope, 'env> {
+    /// Schedule a borrowing task.
     pub fn spawn(&'scope self, f: impl FnOnce() + Send + 'scope) {
-        self.pending.fetch_add(1, Ordering::Relaxed);
-
-        let wrapped_job = move || {
-            f();
-            self.pending.fetch_sub(1, Ordering::Relaxed);
-            self.waker.condvar.notify_all();
-        };
-
-        let job_fn: Box<dyn FnOnce() + Send + 'scope> = Box::new(wrapped_job);
-        // Effacer le lifetime — SAFETY : safe uniquement parce que wait_all()
-        // garantit que les jobs sont finis avant que 'scope expire
-        let job_fn: Box<dyn FnOnce() + Send + 'static> = unsafe { std::mem::transmute(job_fn) };
-        self.pool.spawn_job(job_fn);
+        self.spawn_with_priority(Priority::Normal, f);
     }
+    /// Schedule a borrowing task at a chosen priority.
+    pub fn spawn_with_priority(&'scope self, priority: Priority, f: impl FnOnce() + Send + 'scope) {
+        self.group.state.lock().unwrap().pending += 1;
+        let group = self.group.clone();
+        let task: Box<dyn FnOnce() + Send + 'scope> = Box::new(move || {
+            let result = catch_unwind(AssertUnwindSafe(f));
+            let mut state = group.state.lock().unwrap();
+            let extra = match result {
+                Err(payload) if state.panic.is_none() => {
+                    state.panic = Some(payload);
+                    None
+                }
+                Err(payload) => Some(payload),
+                Ok(()) => None,
+            };
+            // Drop extra panic payloads outside the lock and before declaring completion.
+            drop(state);
+            discard(extra);
+            let mut state = group.state.lock().unwrap();
+            state.pending -= 1;
+            group.wake.notify_all();
+        });
+        // SAFETY: Scope is invariant in 'scope and cannot be constructed publicly.
+        // ThreadPool::scope catches the body panic and waits for every task,
+        // including descendants, before returning or unwinding. Captures are
+        // consumed/dropped before pending is decremented.
+        let task = unsafe {
+            std::mem::transmute::<
+                Box<dyn FnOnce() + Send + 'scope>,
+                Box<dyn FnOnce() + Send + 'static>,
+            >(task)
+        };
+        self.shared.enqueue(Job::from_raw(task, priority));
+    }
+    /// Submit a borrowing task and receive its result.
     pub fn submit<T: Send + 'scope>(
         &'scope self,
         f: impl FnOnce() -> T + Send + 'scope,
     ) -> JoinHandle<T> {
-        self.pending.fetch_add(1, Ordering::Relaxed);
-        let (state, handle) = JobState::<T>::channel();
-
-        let wrapped_job = move || {
-            let result = f();
+        self.submit_with_priority(Priority::Normal, f)
+    }
+    /// Submit borrowing work at a chosen priority.
+    pub fn submit_with_priority<T: Send + 'scope>(
+        &'scope self,
+        priority: Priority,
+        f: impl FnOnce() -> T + Send + 'scope,
+    ) -> JoinHandle<T> {
+        let (state, mut handle) = JobState::channel();
+        let failed = Arc::new(AtomicBool::new(false));
+        handle.scoped_failure = Some(failed.clone());
+        self.group
+            .state
+            .lock()
+            .unwrap()
+            .submissions
+            .push(failed.clone());
+        self.spawn_with_priority(priority, move || {
+            let result = catch_unwind(AssertUnwindSafe(f));
+            failed.store(result.is_err(), Ordering::Release);
             state.complete(result);
-            self.pending.fetch_sub(1, Ordering::Release);
-            self.waker.condvar.notify_all();
-        };
-
-        let job_fn: Box<dyn FnOnce() + Send + 'scope> = Box::new(wrapped_job);
-        // Effacer le lifetime — SAFETY : safe uniquement parce que wait_all()
-        // garantit que les jobs sont finis avant que 'scope expire
-        let job_fn: Box<dyn FnOnce() + Send + 'static> = unsafe { std::mem::transmute(job_fn) };
-        self.pool.spawn_job(job_fn);
+            drop(state);
+        });
         handle
     }
-    pub(crate) fn wait_all(&self) {
-        let mut guard = self.waker.mutex.lock().unwrap();
-        while self.pending.load(Ordering::Acquire) > 0 {
-            guard = self.waker.condvar.wait(guard).unwrap();
+    fn wait(&self) {
+        loop {
+            if self.group.state.lock().unwrap().pending == 0 {
+                return;
+            }
+            if help_current() {
+                continue;
+            }
+            let state = self.group.state.lock().unwrap();
+            if state.pending == 0 {
+                return;
+            }
+            drop(
+                self.group
+                    .wake
+                    .wait_timeout(state, std::time::Duration::from_millis(1))
+                    .unwrap(),
+            );
         }
     }
 }
