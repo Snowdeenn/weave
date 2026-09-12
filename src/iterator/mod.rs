@@ -5,12 +5,18 @@
 pub mod adaptator;
 /// Element-aligned slice chunks.
 pub mod chunk_aligned;
+/// Lazy filtering adapter.
+pub mod filter;
+/// Lazy mapping adapter.
+pub mod map;
 /// Exclusive usize range sources.
 pub mod range;
 /// Borrowing slice sources and extension traits.
 pub mod slice;
-pub use adaptator::Map;
+
 pub use chunk_aligned::ChunksAligned;
+pub use filter::Filter;
+pub use map::Map;
 pub use range::RangeIter;
 pub use slice::{ParallelSlice, ParallelSliceMut, SliceIter, SliceIterMut};
 
@@ -33,8 +39,10 @@ pub trait Consumer<T>: Send + Sized {
 pub trait ParallelIterator: Sized + Send {
     /// Produced element.
     type Item: Send;
+
     /// Execute a consumer; advanced extension point for custom sources.
     fn drive_to<C: Consumer<Self::Item>>(self, consumer: C) -> C::Result;
+
     /// Execute an action for each element. Side-effect order is unspecified.
     fn for_each<F: Fn(Self::Item) + Sync>(self, f: F) {
         self.drive_to(adaptator::ForEachConsumer { f: &f });
@@ -44,6 +52,21 @@ pub trait ParallelIterator: Sized + Send {
         Map {
             base: self,
             f: std::sync::Arc::new(f),
+        }
+    }
+
+    /// Lazily retain only the elements accepted by `predicate`.
+    ///
+    /// The resulting iterator preserves order but no longer has an exact
+    /// length, so indexed-only operations such as [`Self::fill`] are not
+    /// available after filtering.
+    fn filter<P>(self, predicate: P) -> Filter<Self, P>
+    where
+        P: Fn(&Self::Item) -> bool + Send + Sync,
+    {
+        Filter {
+            base: self,
+            predicate: std::sync::Arc::new(predicate),
         }
     }
     /// Fold leaves using a neutral seed, then combine their outputs.
@@ -73,10 +96,12 @@ pub trait ParallelIterator: Sized + Send {
         })
         .acc
     }
+
     /// Collect elements in source order.
     fn collect(self) -> Vec<Self::Item> {
         self.drive_to(adaptator::CollectConsumer(Vec::new()))
     }
+
     /// Fill an exactly sized destination in source order, without an intermediate buffer.
     /// Panics before evaluation if lengths differ. A task panic may leave partial writes.
     fn fill(self, output: &mut [Self::Item])
@@ -119,8 +144,11 @@ pub(crate) fn drive<I: IndexedParallelIterator, C: Consumer<I::Item>>(
         let mid = source.len() / 2;
         let (left, right) = source.split_at(mid);
         let (lc, rc) = consumer.split_at(mid);
-        let (left, right) =
-            crate::pool::join_on(&worker_context.shared, move || drive(left, lc), move || drive(right, rc));
+        let (left, right) = crate::pool::join_on(
+            &worker_context.shared,
+            move || drive(left, lc),
+            move || drive(right, rc),
+        );
         return C::combine(left, right);
     }
     for item in source.into_sequential() {

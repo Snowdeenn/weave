@@ -179,3 +179,78 @@ fn fold_clones_only_at_splits_and_ordered_collection_is_stable() {
         (0..2000).map(|n| n.to_string()).collect::<Vec<_>>()
     );
 }
+
+#[test]
+fn parallel_filter_same_as_sequential() {
+    let pool = ThreadPoolBuilder::new().num_threads(4).build();
+    let result = pool.install(|| (0..10_000).parallelize().filter(|n| n % 2 == 0).collect());
+
+    assert_eq!(
+        result,
+        (0..10_000).filter(|n| n % 2 == 0).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn filter_handles_empty_source() {
+    let result = (0..0).parallelize().filter(|_| true).collect();
+
+    assert!(result.is_empty());
+}
+
+#[test]
+fn filter_can_reject_every_element() {
+    let result = (0..100).parallelize().filter(|_| false).collect();
+
+    assert!(result.is_empty());
+}
+
+#[test]
+fn filter_can_accept_every_element() {
+    let result = (0..100).parallelize().filter(|_| true).collect();
+
+    assert_eq!(result, (0..100).collect::<Vec<_>>());
+}
+
+#[test]
+fn filter_map() {
+    let pool = ThreadPoolBuilder::new().num_threads(4).build();
+    let result = pool.install(|| {
+        (0..10_000)
+            .parallelize()
+            .map(|n| n + 2)
+            .filter(|n| *n % 2 == 0)
+            .collect()
+    });
+
+    assert_eq!(
+        result,
+        (0..10_000)
+            .into_iter()
+            .map(|n| n + 2)
+            .filter(|n| *n % 2 == 0)
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn filter_supports_a_predicate_capturing_a_non_copy_value() {
+    let prefix = String::from("weave");
+
+    let values = [
+        String::from("weave-pool"),
+        String::from("rayon"),
+        String::from("weave-iterator"),
+        String::from("thread"),
+    ];
+
+    let result = values
+        .iter_parallel()
+        .filter(move |value| value.starts_with(&prefix))
+        .collect();
+
+    assert_eq!(
+        result,
+        vec![&String::from("weave-pool"), &String::from("weave-iterator"),]
+    );
+}
