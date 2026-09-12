@@ -1,7 +1,7 @@
 use crate::{
     ThreadPool,
     cache_padded::CachePadded,
-    pool::{SharedPoolData, current},
+    pool::{SharedPoolData, current_worker},
 };
 use std::sync::{Arc, Mutex, TryLockError, Weak};
 
@@ -47,7 +47,7 @@ impl<T> WorkerLocal<T> {
     }
     /// Access this worker's value without waiting on a recursive borrow.
     pub fn try_with<R>(&self, f: impl FnOnce(&mut T) -> R) -> Result<R, WorkerLocalError> {
-        let worker_context = current().ok_or(WorkerLocalError::WrongPool)?;
+        let worker_context = current_worker().ok_or(WorkerLocalError::WrongPool)?;
         if !Weak::ptr_eq(&self.owner, &Arc::downgrade(&worker_context.shared)) {
             return Err(WorkerLocalError::WrongPool);
         }

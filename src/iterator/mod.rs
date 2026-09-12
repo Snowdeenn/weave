@@ -114,7 +114,7 @@ pub(crate) fn drive<I: IndexedParallelIterator, C: Consumer<I::Item>>(
     mut consumer: C,
 ) -> C::Result {
     if source.len() > MIN_CHUNK_SIZE
-        && let Some(worker_context) = crate::pool::current()
+        && let Some(worker_context) = crate::pool::current_worker()
     {
         let mid = source.len() / 2;
         let (left, right) = source.split_at(mid);

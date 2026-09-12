@@ -1,4 +1,4 @@
-use crate::pool::help_current;
+use crate::pool::help_current_worker;
 use std::sync::{Arc, Condvar, Mutex};
 pub(crate) struct JobState<T> {
     result: Mutex<Option<std::thread::Result<T>>>,
@@ -46,7 +46,7 @@ impl<T> JoinHandle<T> {
                     return value;
                 }
             }
-            if help_current() {
+            if help_current_worker() {
                 continue;
             }
             let result = self.state.result.lock().unwrap();

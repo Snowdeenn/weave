@@ -1,7 +1,7 @@
 use crate::{
     Job, JoinHandle, Priority, ThreadPool,
     handle::JobState,
-    pool::{SharedPoolData, discard, help_current},
+    pool::{SharedPoolData, discard, help_current_worker},
 };
 use std::{
     marker::PhantomData,
@@ -186,7 +186,7 @@ impl<'scope, 'env> Scope<'scope, 'env> {
             if self.group.state.lock().unwrap().pending == 0 {
                 return;
             }
-            if help_current() {
+            if help_current_worker() {
                 continue;
             }
             let state = self.group.state.lock().unwrap();

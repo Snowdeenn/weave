@@ -26,11 +26,11 @@ pub(crate) struct WorkerContext {
 thread_local! {
     static CURRENT_WORKER: RefCell<Option<WorkerContext>> = const { RefCell::new(None) };
 }
-pub(crate) fn current() -> Option<WorkerContext> {
+pub(crate) fn current_worker() -> Option<WorkerContext> {
     CURRENT_WORKER.with(|c| c.borrow().clone())
 }
-pub(crate) fn help_current() -> bool {
-    current().is_some_and(|ctx| ctx.shared.help(ctx.index))
+pub(crate) fn help_current_worker() -> bool {
+    current_worker().is_some_and(|ctx| ctx.shared.help(ctx.index))
 }
 impl Scheduler {
     fn take(&mut self, index: usize) -> Option<Job> {
@@ -54,7 +54,7 @@ impl Scheduler {
 }
 impl SharedPoolData {
     pub(crate) fn enqueue(self: &Arc<Self>, job: Job) {
-        let local_worker = current()
+        let local_worker = current_worker()
             .filter(|ctx| Arc::ptr_eq(&ctx.shared, self))
             .map(|ctx| ctx.index);
         let mut scheduler = self.scheduler.lock().unwrap();
@@ -191,7 +191,7 @@ impl ThreadPool {
     }
     /// Run borrowed code on this pool, enabling parallel iterator execution.
     pub fn install<T: Send>(&self, f: impl FnOnce() -> T + Send) -> T {
-        if current().is_some_and(|ctx| Arc::ptr_eq(&ctx.shared, &self.shared)) {
+        if current_worker().is_some_and(|ctx| Arc::ptr_eq(&ctx.shared, &self.shared)) {
             return f();
         }
         join_on(&self.shared, f, || ()).0
@@ -257,7 +257,7 @@ fn worker_loop(shared: Arc<SharedPoolData>, index: usize) {
 impl Drop for ThreadPool {
     fn drop(&mut self) {
         self.shared.stop();
-        if current().is_some_and(|ctx| Arc::ptr_eq(&ctx.shared, &self.shared)) {
+        if current_worker().is_some_and(|ctx| Arc::ptr_eq(&ctx.shared, &self.shared)) {
             return;
         }
         for thread in self.threads.drain(..) {
