@@ -1,7 +1,7 @@
 use crate::{
     Job, JoinHandle, Priority, ThreadPool,
     handle::JobState,
-    pool::{Shared, discard, help_current},
+    pool::{SharedPoolData, discard, help_current},
 };
 use std::{
     marker::PhantomData,
@@ -55,7 +55,7 @@ struct Group {
 /// });
 /// ```
 pub struct Scope<'scope, 'env: 'scope> {
-    shared: Arc<Shared>,
+    shared: Arc<SharedPoolData>,
     group: Arc<Group>,
     scope: PhantomData<&'scope mut &'scope ()>,
     env: PhantomData<&'env mut &'env ()>,

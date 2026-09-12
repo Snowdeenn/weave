@@ -114,13 +114,13 @@ pub(crate) fn drive<I: IndexedParallelIterator, C: Consumer<I::Item>>(
     mut consumer: C,
 ) -> C::Result {
     if source.len() > MIN_CHUNK_SIZE
-        && let Some((pool, _)) = crate::pool::current()
+        && let Some(worker_context) = crate::pool::current()
     {
         let mid = source.len() / 2;
         let (left, right) = source.split_at(mid);
         let (lc, rc) = consumer.split_at(mid);
         let (left, right) =
-            crate::pool::join_on(&pool, move || drive(left, lc), move || drive(right, rc));
+            crate::pool::join_on(&worker_context.shared, move || drive(left, lc), move || drive(right, rc));
         return C::combine(left, right);
     }
     for item in source.into_sequential() {

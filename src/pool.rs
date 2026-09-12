@@ -13,18 +13,24 @@ struct Scheduler {
     shutdown: bool,
     steals: usize,
 }
-pub(crate) struct Shared {
+pub(crate) struct SharedPoolData {
     scheduler: Mutex<Scheduler>,
     wake: Condvar,
 }
-thread_local! {
-    static CURRENT: RefCell<Option<(Arc<Shared>, usize)>> = const { RefCell::new(None) };
+
+#[derive(Clone)]
+pub(crate) struct WorkerContext {
+    pub shared: Arc<SharedPoolData>,
+    pub index: usize,
 }
-pub(crate) fn current() -> Option<(Arc<Shared>, usize)> {
-    CURRENT.with(|c| c.borrow().clone())
+thread_local! {
+    static CURRENT_WORKER: RefCell<Option<WorkerContext>> = const { RefCell::new(None) };
+}
+pub(crate) fn current() -> Option<WorkerContext> {
+    CURRENT_WORKER.with(|c| c.borrow().clone())
 }
 pub(crate) fn help_current() -> bool {
-    current().is_some_and(|(shared, index)| shared.help(index))
+    current().is_some_and(|ctx| ctx.shared.help(ctx.index))
 }
 impl Scheduler {
     fn take(&mut self, index: usize) -> Option<Job> {
@@ -46,14 +52,14 @@ impl Scheduler {
         None
     }
 }
-impl Shared {
+impl SharedPoolData {
     pub(crate) fn enqueue(self: &Arc<Self>, job: Job) {
-        let local = current()
-            .filter(|(pool, _)| Arc::ptr_eq(pool, self))
-            .map(|(_, i)| i);
+        let local_worker = current()
+            .filter(|ctx| Arc::ptr_eq(&ctx.shared, self))
+            .map(|ctx| ctx.index);
         let mut scheduler = self.scheduler.lock().unwrap();
         let priority = job.priority().index();
-        match local {
+        match local_worker {
             Some(i) => scheduler.local[i][priority].push_back(job),
             None => scheduler.global[priority].push_back(job),
         }
@@ -87,7 +93,7 @@ impl Shared {
 /// External drop drains accepted work. Drop on an owned worker requests
 /// shutdown and lets workers finish asynchronously to avoid self-joining.
 pub struct ThreadPool {
-    pub(crate) shared: Arc<Shared>,
+    pub(crate) shared: Arc<SharedPoolData>,
     threads: Vec<std::thread::JoinHandle<()>>,
     num_threads: usize,
 }
@@ -108,7 +114,7 @@ impl ThreadPool {
         if thread_name.contains('\0') {
             return Err(BuildError::InvalidThreadName);
         }
-        let shared = Arc::new(Shared {
+        let shared = Arc::new(SharedPoolData {
             scheduler: Mutex::new(Scheduler {
                 global: Default::default(),
                 local: (0..num_threads).map(|_| Queues::default()).collect(),
@@ -185,14 +191,14 @@ impl ThreadPool {
     }
     /// Run borrowed code on this pool, enabling parallel iterator execution.
     pub fn install<T: Send>(&self, f: impl FnOnce() -> T + Send) -> T {
-        if current().is_some_and(|(s, _)| Arc::ptr_eq(&s, &self.shared)) {
+        if current().is_some_and(|ctx| Arc::ptr_eq(&ctx.shared, &self.shared)) {
             return f();
         }
         join_on(&self.shared, f, || ()).0
     }
 }
 pub(crate) fn join_on<A: Send, B>(
-    shared: &Arc<Shared>,
+    shared: &Arc<SharedPoolData>,
     left: impl FnOnce() -> A + Send,
     right: impl FnOnce() -> B,
 ) -> (A, B) {
@@ -226,8 +232,8 @@ pub(crate) fn discard<T>(value: T) {
         std::mem::forget(panic);
     }
 }
-fn worker_loop(shared: Arc<Shared>, index: usize) {
-    CURRENT.with(|c| *c.borrow_mut() = Some((shared.clone(), index)));
+fn worker_loop(shared: Arc<SharedPoolData>, index: usize) {
+    CURRENT_WORKER.with(|c| *c.borrow_mut() = Some(WorkerContext { shared: shared.clone(), index }));
     loop {
         let job = {
             let mut scheduler = shared.scheduler.lock().unwrap();
@@ -246,12 +252,12 @@ fn worker_loop(shared: Arc<Shared>, index: usize) {
             None => break,
         }
     }
-    CURRENT.with(|c| *c.borrow_mut() = None);
+    CURRENT_WORKER.with(|c| *c.borrow_mut() = None);
 }
 impl Drop for ThreadPool {
     fn drop(&mut self) {
         self.shared.stop();
-        if current().is_some_and(|(s, _)| Arc::ptr_eq(&s, &self.shared)) {
+        if current().is_some_and(|ctx| Arc::ptr_eq(&ctx.shared, &self.shared)) {
             return;
         }
         for thread in self.threads.drain(..) {

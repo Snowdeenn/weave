@@ -1,7 +1,7 @@
 use crate::{
     ThreadPool,
     cache_padded::CachePadded,
-    pool::{Shared, current},
+    pool::{SharedPoolData, current},
 };
 use std::sync::{Arc, Mutex, TryLockError, Weak};
 
@@ -24,7 +24,7 @@ impl std::error::Error for WorkerLocalError {}
 
 /// One independently initialized value per worker, bound to a specific pool.
 pub struct WorkerLocal<T> {
-    owner: Weak<Shared>,
+    owner: Weak<SharedPoolData>,
     inner: Vec<CachePadded<Mutex<T>>>,
 }
 impl<T> WorkerLocal<T> {
@@ -47,11 +47,11 @@ impl<T> WorkerLocal<T> {
     }
     /// Access this worker's value without waiting on a recursive borrow.
     pub fn try_with<R>(&self, f: impl FnOnce(&mut T) -> R) -> Result<R, WorkerLocalError> {
-        let (pool, i) = current().ok_or(WorkerLocalError::WrongPool)?;
-        if !Weak::ptr_eq(&self.owner, &Arc::downgrade(&pool)) {
+        let worker_context = current().ok_or(WorkerLocalError::WrongPool)?;
+        if !Weak::ptr_eq(&self.owner, &Arc::downgrade(&worker_context.shared)) {
             return Err(WorkerLocalError::WrongPool);
         }
-        let mut value = self.inner[i].0.try_lock().map_err(|e| match e {
+        let mut value = self.inner[worker_context.index].0.try_lock().map_err(|e| match e {
             TryLockError::WouldBlock => WorkerLocalError::AlreadyBorrowed,
             TryLockError::Poisoned(_) => WorkerLocalError::Poisoned,
         })?;
