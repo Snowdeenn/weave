@@ -1,4 +1,154 @@
 use super::*;
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
+
+pub(crate) struct SumConsumer<S>(pub(crate) S);
+
+impl<T, S: Send + std::iter::Sum<T> + std::iter::Sum<S>> Consumer<T> for SumConsumer<S> {
+    type Result = S;
+    fn consume(&mut self, item: T) {
+        let previous = std::mem::replace(
+            &mut self.0,
+            <S as std::iter::Sum<T>>::sum(std::iter::empty()),
+        );
+        let item = <S as std::iter::Sum<T>>::sum(std::iter::once(item));
+        self.0 = <S as std::iter::Sum<S>>::sum([previous, item].into_iter());
+    }
+    fn split_at(self, _: usize) -> (Self, Self) {
+        (
+            self,
+            Self(<S as std::iter::Sum<T>>::sum(std::iter::empty())),
+        )
+    }
+    fn combine(left: S, right: S) -> S {
+        <S as std::iter::Sum<S>>::sum([left, right].into_iter())
+    }
+    fn finish(self) -> S {
+        self.0
+    }
+}
+
+// A match in a left subtree cancels only its right sibling and descendants.
+// Nodes describe source partitions, so this also works after filtering.
+struct SearchNode {
+    left_found: AtomicBool,
+    parent: Option<(Arc<SearchNode>, bool)>,
+}
+
+enum SearchState {
+    Any(Arc<AtomicBool>),
+    First(Arc<SearchNode>),
+}
+
+impl SearchState {
+    fn split(self) -> (Self, Self) {
+        match self {
+            Self::Any(found) => (Self::Any(found.clone()), Self::Any(found)),
+            Self::First(parent) => {
+                let child = |right| {
+                    Self::First(Arc::new(SearchNode {
+                        left_found: AtomicBool::new(false),
+                        parent: Some((parent.clone(), right)),
+                    }))
+                };
+                (child(false), child(true))
+            }
+        }
+    }
+
+    fn cancelled(&self) -> bool {
+        match self {
+            Self::Any(found) => found.load(Ordering::Relaxed),
+            Self::First(node) => {
+                let mut node = node.as_ref();
+                while let Some((parent, right)) = &node.parent {
+                    if *right && parent.left_found.load(Ordering::Relaxed) {
+                        return true;
+                    }
+                    node = parent;
+                }
+                false
+            }
+        }
+    }
+
+    fn claim(&self) -> bool {
+        match self {
+            Self::Any(found) => !found.swap(true, Ordering::Relaxed),
+            Self::First(node) => {
+                let mut node = node.as_ref();
+                while let Some((parent, right)) = &node.parent {
+                    if !right {
+                        parent.left_found.store(true, Ordering::Relaxed);
+                    }
+                    node = parent;
+                }
+                true
+            }
+        }
+    }
+}
+
+pub(crate) struct FindConsumer<'a, T, P> {
+    predicate: &'a P,
+    result: Option<T>,
+    state: SearchState,
+}
+
+impl<'a, T, P> FindConsumer<'a, T, P> {
+    pub(crate) fn any(predicate: &'a P) -> Self {
+        Self {
+            predicate,
+            result: None,
+            state: SearchState::Any(Arc::new(AtomicBool::new(false))),
+        }
+    }
+    pub(crate) fn first(predicate: &'a P) -> Self {
+        Self {
+            predicate,
+            result: None,
+            state: SearchState::First(Arc::new(SearchNode {
+                left_found: AtomicBool::new(false),
+                parent: None,
+            })),
+        }
+    }
+}
+
+impl<T: Send, P: Fn(&T) -> bool + Sync> Consumer<T> for FindConsumer<'_, T, P> {
+    type Result = Option<T>;
+    fn consume(&mut self, item: T) {
+        if !self.is_full() && (self.predicate)(&item) && self.state.claim() {
+            self.result = Some(item);
+        }
+    }
+    fn is_full(&self) -> bool {
+        self.result.is_some() || self.state.cancelled()
+    }
+    fn split_at(self, _: usize) -> (Self, Self) {
+        let (left, right) = self.state.split();
+        (
+            Self {
+                predicate: self.predicate,
+                result: self.result,
+                state: left,
+            },
+            Self {
+                predicate: self.predicate,
+                result: None,
+                state: right,
+            },
+        )
+    }
+    fn combine(left: Self::Result, right: Self::Result) -> Self::Result {
+        left.or(right)
+    }
+    fn finish(self) -> Self::Result {
+        self.result
+    }
+}
 
 pub(crate) struct CollectConsumer<T>(pub(crate) Vec<T>);
 impl<T: Send> Consumer<T> for CollectConsumer<T> {

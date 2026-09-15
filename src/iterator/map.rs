@@ -49,6 +49,9 @@ impl<T, R, C: Consumer<R>, F: Fn(T) -> R + Sync> Consumer<T> for MapConsumer<'_,
     fn consume(&mut self, item: T) {
         self.consumer.consume((self.f)(item));
     }
+    fn is_full(&self) -> bool {
+        self.consumer.is_full()
+    }
     fn split_at(self, index: usize) -> (Self, Self) {
         let (left, right) = self.consumer.split_at(index);
         (

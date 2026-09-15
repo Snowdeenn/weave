@@ -34,6 +34,11 @@ pub trait Consumer<T>: Send + Sized {
     type Result: Send;
     /// Process one item.
     fn consume(&mut self, item: T);
+    /// Whether this consumer needs no further items. Sources should check this
+    /// before splitting or producing an item; adapters must forward the check.
+    fn is_full(&self) -> bool {
+        false
+    }
     /// Divide before either half is consumed.
     fn split_at(self, index: usize) -> (Self, Self);
     /// Merge left and right outputs in source order.
@@ -132,6 +137,80 @@ pub trait ParallelIterator: Sized + Send {
         self.drive_to(adaptator::CollectConsumer(Vec::new()))
     }
 
+    /// Count produced elements, evaluating upstream transformations.
+    fn count(self) -> usize {
+        self.fold(0usize, |count, _| count + 1, |a, b| a + b)
+    }
+
+    /// Sum elements using independent partial sums and an associative merge.
+    /// Empty input yields `S::sum` over an empty iterator. Floating-point
+    /// rounding and integer overflow may differ from sequential summation.
+    fn sum<S>(self) -> S
+    where
+        S: Send + std::iter::Sum<Self::Item> + std::iter::Sum<S>,
+    {
+        self.drive_to(adaptator::SumConsumer::<S>(<S as std::iter::Sum<
+            Self::Item,
+        >>::sum(
+            std::iter::empty()
+        )))
+    }
+
+    /// Return the smallest element, or `None` for empty input.
+    /// When elements compare equal, return the first in source order.
+    fn min(self) -> Option<Self::Item>
+    where
+        Self::Item: Ord,
+    {
+        self.reduce(std::cmp::min)
+    }
+
+    /// Return the largest element, or `None` for empty input.
+    /// When elements compare equal, return the last in source order.
+    fn max(self) -> Option<Self::Item>
+    where
+        Self::Item: Ord,
+    {
+        self.reduce(std::cmp::max)
+    }
+
+    /// Return any element accepted by `predicate`, or `None` if none match.
+    /// The chosen match is unspecified. Workers stop cooperatively; callbacks
+    /// already in progress may still execute or panic before this returns.
+    fn find_any<P>(self, predicate: P) -> Option<Self::Item>
+    where
+        P: Fn(&Self::Item) -> bool + Sync,
+    {
+        self.drive_to(adaptator::FindConsumer::any(&predicate))
+    }
+
+    /// Return the first matching element in source order, or `None`.
+    /// Later work stops cooperatively, while earlier partitions are searched
+    /// to establish the first match. Concurrent callbacks may still execute
+    /// or panic before this returns.
+    fn find_first<P>(self, predicate: P) -> Option<Self::Item>
+    where
+        P: Fn(&Self::Item) -> bool + Sync,
+    {
+        self.drive_to(adaptator::FindConsumer::first(&predicate))
+    }
+
+    /// Alias for [`Self::find_first`], preserving sequential `find` semantics.
+    fn find<P>(self, predicate: P) -> Option<Self::Item>
+    where
+        P: Fn(&Self::Item) -> bool + Sync,
+    {
+        self.find_first(predicate)
+    }
+
+    /// Append produced elements to `output` in source order.
+    /// Elements are first collected in parallel, then appended via `Extend`.
+    /// An upstream panic leaves `output` unchanged; a panic inside its own
+    /// `Extend` implementation may leave it partially extended.
+    fn extend<E: Extend<Self::Item>>(self, output: &mut E) {
+        output.extend(self.collect());
+    }
+
     /// Fill an exactly sized destination in source order, without an intermediate buffer.
     /// Panics before evaluation if lengths differ. A task panic may leave partial writes.
     fn fill(self, output: &mut [Self::Item])
@@ -168,6 +247,9 @@ pub(crate) fn drive<I: IndexedParallelIterator, C: Consumer<I::Item>>(
     source: I,
     mut consumer: C,
 ) -> C::Result {
+    if consumer.is_full() {
+        return consumer.finish();
+    }
     if source.len() > MIN_CHUNK_SIZE
         && let Some(worker_context) = crate::pool::current_worker()
     {
@@ -181,7 +263,9 @@ pub(crate) fn drive<I: IndexedParallelIterator, C: Consumer<I::Item>>(
         );
         return C::combine(left, right);
     }
-    for item in source.into_sequential() {
+    let mut items = source.into_sequential();
+    while !consumer.is_full() {
+        let Some(item) = items.next() else { break };
         consumer.consume(item);
     }
     consumer.finish()

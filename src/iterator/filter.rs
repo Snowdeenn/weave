@@ -41,6 +41,9 @@ where
             self.consumer.consume(item);
         }
     }
+    fn is_full(&self) -> bool {
+        self.consumer.is_full()
+    }
     fn split_at(self, index: usize) -> (Self, Self) {
         let (left, right) = self.consumer.split_at(index);
         (

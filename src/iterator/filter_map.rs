@@ -39,6 +39,9 @@ where
             self.consumer.consume(result);
         }
     }
+    fn is_full(&self) -> bool {
+        self.consumer.is_full()
+    }
 
     fn finish(self) -> Self::Result {
         self.consumer.finish()
