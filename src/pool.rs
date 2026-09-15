@@ -233,7 +233,12 @@ pub(crate) fn discard<T>(value: T) {
     }
 }
 fn worker_loop(shared: Arc<SharedPoolData>, index: usize) {
-    CURRENT_WORKER.with(|c| *c.borrow_mut() = Some(WorkerContext { shared: shared.clone(), index }));
+    CURRENT_WORKER.with(|c| {
+        *c.borrow_mut() = Some(WorkerContext {
+            shared: shared.clone(),
+            index,
+        })
+    });
     loop {
         let job = {
             let mut scheduler = shared.scheduler.lock().unwrap();

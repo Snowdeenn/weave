@@ -51,10 +51,13 @@ impl<T> WorkerLocal<T> {
         if !Weak::ptr_eq(&self.owner, &Arc::downgrade(&worker_context.shared)) {
             return Err(WorkerLocalError::WrongPool);
         }
-        let mut value = self.inner[worker_context.index].0.try_lock().map_err(|e| match e {
-            TryLockError::WouldBlock => WorkerLocalError::AlreadyBorrowed,
-            TryLockError::Poisoned(_) => WorkerLocalError::Poisoned,
-        })?;
+        let mut value = self.inner[worker_context.index]
+            .0
+            .try_lock()
+            .map_err(|e| match e {
+                TryLockError::WouldBlock => WorkerLocalError::AlreadyBorrowed,
+                TryLockError::Poisoned(_) => WorkerLocalError::Poisoned,
+            })?;
         Ok(f(&mut value))
     }
     /// Consume the storage and recover every value, even if a callback panicked.
