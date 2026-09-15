@@ -7,6 +7,8 @@ pub mod adaptator;
 pub mod chunk_aligned;
 /// Lazy filtering adapter.
 pub mod filter;
+/// Lazy filtering and mapping adapter.
+pub mod filter_map;
 /// Lazy mapping adapter.
 pub mod map;
 /// Exclusive usize range sources.
@@ -16,6 +18,7 @@ pub mod slice;
 
 pub use chunk_aligned::ChunksAligned;
 pub use filter::Filter;
+pub use filter_map::FilterMap;
 pub use map::Map;
 pub use range::RangeIter;
 pub use slice::{ParallelSlice, ParallelSliceMut, SliceIter, SliceIterMut};
@@ -69,6 +72,23 @@ pub trait ParallelIterator: Sized + Send {
             predicate: std::sync::Arc::new(predicate),
         }
     }
+
+    /// Lazily filters and transforms elements using `f`.
+    ///
+    /// The returned iterator yields each value for which `f` returns
+    /// `Some(value)`. Elements producing `None` are discarded.
+    ///
+    /// This is a concise alternative to chaining [`ParallelIterator::filter`]
+    /// and [`ParallelIterator::map`].
+    ///
+    /// The resulting iterator is not indexed because elements may be removed.
+    fn filter_map<R, F>(self, f: F) -> FilterMap<Self, F>
+    where
+        F: Fn(Self::Item) -> Option<R> + Send + Sync,
+    {
+        FilterMap { base: self, op: f }
+    }
+
     /// Fold leaves using a neutral seed, then combine their outputs.
     /// The seed is cloned once per split, not once per element.
     /// Combine must be associative and agree with the leaf operation.

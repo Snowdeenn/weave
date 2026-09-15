@@ -218,8 +218,10 @@ fn filter_map() {
     let result = pool.install(|| {
         (0..10_000)
             .parallelize()
-            .map(|n| n + 2)
-            .filter(|n| *n % 2 == 0)
+            .filter_map(|n| {
+                let value = n + 2;
+                (value % 2 == 0).then_some(value)
+            })
             .collect()
     });
 
@@ -227,8 +229,10 @@ fn filter_map() {
         result,
         (0..10_000)
             .into_iter()
-            .map(|n| n + 2)
-            .filter(|n| *n % 2 == 0)
+            .filter_map(|n| {
+                let value = n + 2;
+                (value % 2 == 0).then_some(value)
+            })
             .collect::<Vec<_>>()
     );
 }
