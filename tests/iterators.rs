@@ -228,7 +228,6 @@ fn filter_map() {
     assert_eq!(
         result,
         (0..10_000)
-            .into_iter()
             .filter_map(|n| {
                 let value = n + 2;
                 (value % 2 == 0).then_some(value)
@@ -257,4 +256,15 @@ fn filter_supports_a_predicate_capturing_a_non_copy_value() {
         result,
         vec![&String::from("weave-pool"), &String::from("weave-iterator"),]
     );
+}
+
+#[test]
+fn enumerate_matches_the_sequential_iterator() {
+    let pool = ThreadPoolBuilder::new().num_thread(4).build();
+    pool.install(|| {
+        assert_eq!(
+            (0..10_000).parallelize().enumerate().collect(),
+            (0..10_000).enumerate().collect::<Vec<_>>()
+        )
+    })
 }

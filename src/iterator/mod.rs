@@ -16,6 +16,9 @@ pub mod range;
 /// Borrowing slice sources and extension traits.
 pub mod slice;
 
+pub mod enumerate;
+pub use enumerate::Enumerate;
+
 pub use chunk_aligned::ChunksAligned;
 pub use filter::Filter;
 pub use filter_map::FilterMap;
@@ -87,6 +90,13 @@ pub trait ParallelIterator: Sized + Send {
         F: Fn(Self::Item) -> Option<R> + Send + Sync,
     {
         FilterMap { base: self, op: f }
+    }
+
+    /// Yields the current index alongside each element.
+    ///
+    /// The index is represented as a `usize` and starts at zero.
+    fn enumerate(self) -> Enumerate<Self> {
+        Enumerate { base: self }
     }
 
     /// Fold leaves using a neutral seed, then combine their outputs.
