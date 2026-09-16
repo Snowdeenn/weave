@@ -9,6 +9,8 @@ mod job;
 mod pool;
 mod scope;
 mod storage;
+/// Passive description of the machine's hardware topology.
+pub mod topology;
 
 pub use builder::ThreadPoolBuilder;
 pub use error::BuildError;
