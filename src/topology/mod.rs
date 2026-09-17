@@ -308,6 +308,58 @@ pub enum TopologyError {
         cpu: CpuId,
     },
 }
+
+impl std::fmt::Display for TopologyError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::UnsupportedPlatform => {
+                write!(
+                    f,
+                    "hardware topology discovery is unsupported on this platform"
+                )
+            }
+            Self::InvalidIdList { input, reason } => {
+                write!(
+                    f,
+                    "invalid operating-system identifier list {input:?}: {reason}"
+                )
+            }
+            Self::Io { path, error } => {
+                write!(f, "cannot read topology file {}: {error}", path.display())
+            }
+            Self::InvalidInteger { path, value } => write!(
+                f,
+                "invalid integer in topology file {}: {value}",
+                path.display()
+            ),
+            Self::CpuInMultipleNumaNodes { cpu, first, second } => write!(
+                f,
+                "online CPU {} belongs to both NUMA node {} and NUMA node {}",
+                cpu.get(),
+                first.get(),
+                second.get()
+            ),
+            Self::CpuWithoutNumaNode { cpu } => {
+                write!(
+                    f,
+                    "online CPU {} does not belong to any NUMA node",
+                    cpu.get()
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for TopologyError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Io { error, .. } => Some(error),
+            Self::InvalidInteger { value, .. } => Some(value),
+            _ => None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
