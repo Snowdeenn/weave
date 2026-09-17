@@ -184,13 +184,25 @@ impl Topology {
 
 #[derive(Debug)]
 pub enum TopologyError {
-    InvalidCpuList {
+    InvalidIdList {
         input: String,
         reason: &'static str,
     },
     Io {
         path: std::path::PathBuf,
         error: std::io::Error,
+    },
+    InvalidInteger {
+        path: std::path::PathBuf,
+        value: std::num::ParseIntError,
+    },
+    CpuInMultipleNumaNodes {
+        cpu: CpuId,
+        first: NumaNodeId,
+        second: NumaNodeId,
+    },
+    CpuWithoutNumaNode {
+        cpu: CpuId,
     },
 }
 #[cfg(test)]
