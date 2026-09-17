@@ -16,6 +16,7 @@ pub mod range;
 /// Borrowing slice sources and extension traits.
 pub mod slice;
 
+/// Lazy adapter yielding each item together with its zero-based source index.
 pub mod enumerate;
 pub use enumerate::Enumerate;
 

@@ -1,4 +1,32 @@
+//! Linux hardware-topology discovery through sysfs.
+//!
+//! The backend reads kernel-provided text files below `/sys/devices/system`:
+//!
+//! - `cpu/online` identifies the logical CPUs currently online;
+//! - `cpu/cpuX/topology/core_id` identifies a CPU's physical core;
+//! - `cpu/cpuX/topology/physical_package_id` identifies its package or socket;
+//! - `node/online` identifies the online NUMA nodes;
+//! - `node/nodeX/cpulist` associates logical CPUs with a NUMA node.
+//!
+//! Discovery is deliberately split into small operations. File-reading
+//! functions preserve the failing path, parsers validate the Linux list
+//! syntax, and [`build_numa_layout`] checks cross-file invariants. The final
+//! [`discover_from`] function only orchestrates those stages. Accepting a
+//! sysfs root as an argument keeps the backend deterministic and testable with
+//! synthetic directory trees.
+//!
+//! This module describes what Linux reports. It does not select worker counts,
+//! set CPU affinity, allocate NUMA-local memory, or choose stealing policies.
+
+use std::vec;
+
 use super::*;
+
+/// Parses Linux's compact list syntax into sorted, unique numeric identifiers.
+///
+/// A list contains comma-separated identifiers and inclusive ranges, such as
+/// `0-3,8,10-11`. Descending ranges, duplicate identifiers, empty elements and
+/// malformed integers are rejected rather than silently normalized.
 fn parse_id_list(input: &str) -> Result<Vec<usize>, TopologyError> {
     let mut ids = Vec::new();
     for element in input.trim().split(',') {
@@ -53,31 +81,38 @@ fn parse_id_list(input: &str) -> Result<Vec<usize>, TopologyError> {
     Ok(ids)
 }
 
+/// Parses a Linux list as strongly typed logical-CPU identifiers.
 pub(super) fn parse_cpu_list(input: &str) -> Result<Vec<CpuId>, TopologyError> {
     let ids = parse_id_list(input)?;
-    Ok(ids.into_iter().map(|id| CpuId::new(id)).collect())
+    Ok(ids.into_iter().map(CpuId::new).collect())
 }
 
+/// Parses a Linux list as strongly typed NUMA-node identifiers.
 pub(super) fn parse_numa_node_list(input: &str) -> Result<Vec<NumaNodeId>, TopologyError> {
     let ids = parse_id_list(input)?;
-    Ok(ids.into_iter().map(|id| NumaNodeId::new(id)).collect())
+    Ok(ids.into_iter().map(NumaNodeId::new).collect())
 }
 
+/// Reads the logical CPUs reported online by `cpu/online`.
+///
+/// Online CPUs are used instead of assuming that every `cpuX` directory is
+/// currently usable. CPU identifiers may be sparse and are returned sorted.
 pub(super) fn read_online_cpus(sysfs_root: &std::path::Path) -> Result<Vec<CpuId>, TopologyError> {
     let path = sysfs_root.join("cpu/online");
     let file = match std::fs::read_to_string(&path) {
         Ok(f) => f,
         Err(e) => {
-            return Err(TopologyError::Io {
-                path: path,
-                error: e,
-            });
+            return Err(TopologyError::Io { path, error: e });
         }
     };
     let cpus = parse_cpu_list(&file)?;
     Ok(cpus)
 }
 
+/// Reads the NUMA nodes reported online by `node/online`.
+///
+/// Absence of this file is interpreted by [`discover_from`] as an UMA system;
+/// other I/O errors remain failures and are not hidden by that fallback.
 pub(super) fn read_online_numa_nodes(
     sysfs_root: &std::path::Path,
 ) -> Result<Vec<NumaNodeId>, TopologyError> {
@@ -85,18 +120,19 @@ pub(super) fn read_online_numa_nodes(
     let file = match std::fs::read_to_string(&path) {
         Ok(f) => f,
         Err(e) => {
-            return Err(TopologyError::Io {
-                path: path,
-                error: e,
-            });
+            return Err(TopologyError::Io { path, error: e });
         }
     };
     let node = parse_numa_node_list(&file)?;
     Ok(node)
 }
 
+/// Reads one signed integer from a sysfs topology file.
+///
+/// Core and package identifiers remain signed so the representation does not
+/// silently reinterpret a negative kernel value as a very large unsigned one.
 fn read_i32(path: &std::path::Path) -> Result<i32, TopologyError> {
-    let file = match std::fs::read_to_string(&path) {
+    let file = match std::fs::read_to_string(path) {
         Ok(f) => f,
         Err(e) => {
             return Err(TopologyError::Io {
@@ -107,15 +143,17 @@ fn read_i32(path: &std::path::Path) -> Result<i32, TopologyError> {
     };
     match file.trim().parse::<i32>() {
         Ok(i) => Ok(i),
-        Err(e) => {
-            return Err(TopologyError::InvalidInteger {
-                path: path.into(),
-                value: e,
-            });
-        }
+        Err(e) => Err(TopologyError::InvalidInteger {
+            path: path.into(),
+            value: e,
+        }),
     }
 }
 
+/// Reads the physical-core identity for one logical CPU.
+///
+/// Linux `core_id` values are not necessarily globally unique. The result
+/// therefore combines `core_id` with `physical_package_id` in a [`CoreId`].
 pub(super) fn read_core_id(
     sysfs_root: &std::path::Path,
     cpu: CpuId,
@@ -134,6 +172,11 @@ pub(super) fn read_core_id(
     Ok(CoreId::new(PackageId::new(package_id), core_id))
 }
 
+/// Reads the logical CPUs associated with one NUMA node.
+///
+/// This function reports the raw `nodeX/cpulist` membership. Filtering against
+/// the online CPU set and validating uniqueness are responsibilities of
+/// [`build_numa_layout`].
 pub(super) fn read_numa_node_cpus(
     sysfs_root: &std::path::Path,
     node: NumaNodeId,
@@ -156,6 +199,15 @@ pub(super) fn read_numa_node_cpus(
     Ok(cpus)
 }
 
+/// Validates NUMA memberships and constructs both directions of the relation.
+///
+/// CPUs not present in `online_cpus` are discarded because a node's `cpulist`
+/// may contain CPUs that are currently offline. Every online CPU must then
+/// occur in exactly one node. The returned vector represents `node -> CPUs`,
+/// while the map supports efficient `CPU -> node` lookup during construction
+/// of [`LogicalCpu`] values.
+///
+/// Nodes and their CPU lists are sorted to keep debug output and tests stable.
 pub(super) fn build_numa_layout(
     online_cpus: &[CpuId],
     memberships: Vec<(NumaNodeId, Vec<CpuId>)>,
@@ -198,15 +250,35 @@ pub(super) fn build_numa_layout(
     Ok((numa_nodes, cpu_to_node))
 }
 
+/// Discovers a complete Linux topology below an explicit sysfs root.
+///
+/// The explicit root separates filesystem access from the public platform
+/// entry point and allows tests to provide synthetic sysfs trees. If
+/// `node/online` does not exist, all online CPUs are assigned to a synthetic
+/// node zero, representing a single uniform memory domain. Other NUMA read
+/// errors are propagated.
+///
+/// The returned [`Topology`] contains only online logical CPUs. Physical cores
+/// are identified by `(package_id, core_id)`, so SMT siblings share a core
+/// identity without being collapsed into one logical CPU.
 pub(super) fn discover_from(sysfs_root: &std::path::Path) -> Result<Topology, TopologyError> {
     let online_cpus = read_online_cpus(sysfs_root)?;
-    let online_numa_node = read_online_numa_nodes(sysfs_root)?;
 
-    let mut memberships = Vec::new();
-    for numa_node in &online_numa_node {
-        let cpus = read_numa_node_cpus(sysfs_root, *numa_node)?;
-        memberships.push((*numa_node, cpus));
-    }
+    let memberships = match read_online_numa_nodes(sysfs_root) {
+        Ok(node_ids) => {
+            let mut m = Vec::new();
+            for numa_node in &node_ids {
+                let cpus = read_numa_node_cpus(sysfs_root, *numa_node)?;
+                m.push((*numa_node, cpus));
+            }
+            m
+        }
+        Err(TopologyError::Io { error, .. }) if error.kind() == std::io::ErrorKind::NotFound => {
+            vec![(NumaNodeId::new(0), online_cpus.clone())]
+        }
+        Err(e) => return Err(e),
+    };
+
     let (numa_nodes, cpu_to_node) = build_numa_layout(&online_cpus, memberships)?;
 
     let mut logical_cpus = Vec::new();
@@ -617,5 +689,44 @@ mod tests {
         assert_eq!(topology.numa_nodes()[0].cpus(), ids(&[0, 2, 8]));
         assert_eq!(topology.numa_nodes()[1].id(), NumaNodeId::new(4));
         assert_eq!(topology.numa_nodes()[1].cpus(), ids(&[7]));
+    }
+
+    #[test]
+    fn discovers_a_synthetic_numa_node_when_node_online_is_absent() {
+        let sysfs = FakeSysfs::new();
+        fs::write(sysfs.root().join("cpu/online"), "0,2\n").unwrap();
+        sysfs.write_cpu_topology(CpuId::new(0), "0\n", "0\n");
+        sysfs.write_cpu_topology(CpuId::new(2), "1\n", "0\n");
+
+        let topology = discover_from(sysfs.root()).unwrap();
+
+        assert_eq!(topology.logical_cpu_count(), 2);
+        assert_eq!(topology.numa_node_count(), 1);
+        assert_eq!(topology.numa_nodes()[0].id(), NumaNodeId::new(0));
+        assert_eq!(topology.numa_nodes()[0].cpus(), ids(&[0, 2]));
+        assert!(
+            topology
+                .logical_cpus()
+                .iter()
+                .all(|cpu| cpu.numa_node() == NumaNodeId::new(0))
+        );
+    }
+
+    #[test]
+    fn does_not_use_the_uma_fallback_for_other_node_online_errors() {
+        let sysfs = FakeSysfs::new();
+        fs::write(sysfs.root().join("cpu/online"), "0\n").unwrap();
+        sysfs.write_cpu_topology(CpuId::new(0), "0\n", "0\n");
+        fs::create_dir_all(sysfs.root().join("node/online")).unwrap();
+        let expected_path = sysfs.root().join("node/online");
+
+        let error = discover_from(sysfs.root()).unwrap_err();
+
+        assert!(matches!(
+            error,
+            TopologyError::Io { path, error }
+                if path == expected_path
+                    && error.kind() != std::io::ErrorKind::NotFound
+        ));
     }
 }

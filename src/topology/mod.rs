@@ -1,14 +1,47 @@
-//! Passive hardware-topology data.
+//! Passive hardware-topology discovery and representation.
 //!
-//! This module describes relationships reported by the operating system. It
-//! deliberately does not decide how many workers to create or where work and
-//! data should be placed.
+//! A machine has several simultaneous topology dimensions. A logical CPU
+//! belongs to a physical core, that core belongs to a package or socket, and
+//! the logical CPU also belongs to a NUMA memory domain. These relationships
+//! must not be inferred from numeric proximity: identifiers may be sparse,
+//! physical-core numbers may repeat across packages, and a package is not
+//! necessarily equivalent to one NUMA node.
+//!
+//! [`Topology`](crate::topology::Topology) records these operating-system
+//! relationships without making runtime policy decisions. In particular, it
+//! does not choose a worker count, pin threads, place memory, or define a
+//! work-stealing order. Those decisions belong to later worker-layout and
+//! scheduler layers.
+//!
+//! Discovery currently uses Linux sysfs and includes only online logical CPUs.
+//! On a Linux system without an exposed NUMA interface, discovery represents
+//! the uniform memory domain as one synthetic node with identifier zero. Other
+//! platforms return
+//! [`TopologyError::UnsupportedPlatform`](crate::topology::TopologyError::UnsupportedPlatform).
+//!
+//! # Example
+//!
+//! ```no_run
+//! use weave::topology::Topology;
+//!
+//! let topology = Topology::discover().expect("hardware topology discovery failed");
+//! println!("{topology:#?}");
+//! println!("logical CPUs: {}", topology.logical_cpu_count());
+//! println!("physical cores: {}", topology.physical_core_count());
+//! println!("packages: {}", topology.package_count());
+//! println!("NUMA nodes: {}", topology.numa_node_count());
+//! ```
 
 use std::collections::HashSet;
 
+#[cfg(target_os = "linux")]
 mod linux;
 
 /// Operating-system identifier of a logical CPU.
+///
+/// A logical CPU is an execution context visible to the operating system. Two
+/// logical CPUs may be SMT siblings sharing the same [`CoreId`], so this type
+/// must not be interpreted as a physical-core identifier.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct CpuId(usize);
 
@@ -70,7 +103,10 @@ impl CoreId {
     }
 }
 
-/// Operating-system identifier of a NUMA node.
+/// Operating-system identifier of a NUMA memory node.
+///
+/// Node identifiers may be sparse and have no implied relationship with
+/// package identifiers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct NumaNodeId(usize);
 
@@ -87,6 +123,10 @@ impl NumaNodeId {
 }
 
 /// A logical CPU and its placement in the hardware topology.
+///
+/// The value exposes both the physical-core relation and the NUMA relation.
+/// Keeping them independent avoids the incorrect assumption that sockets and
+/// NUMA nodes always have a one-to-one correspondence.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LogicalCpu {
     id: CpuId,
@@ -116,7 +156,10 @@ impl LogicalCpu {
     }
 }
 
-/// A NUMA node and its online logical CPUs.
+/// A NUMA memory domain and its online logical CPUs.
+///
+/// CPU identifiers are stored in ascending order. The type describes
+/// membership only; it does not expose allocation or memory-affinity policy.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NumaNode {
     id: NumaNodeId,
@@ -136,6 +179,10 @@ impl NumaNode {
 }
 
 /// Passive description of logical CPUs, physical cores, packages and NUMA nodes.
+///
+/// Logical CPUs are the primary records. Counts of physical cores and packages
+/// are derived from their identities, while NUMA nodes retain the inverse
+/// node-to-CPU relation useful for inspection and future worker layout.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Topology {
     logical_cpus: Vec<LogicalCpu>,
@@ -143,6 +190,29 @@ pub struct Topology {
 }
 
 impl Topology {
+    /// Discovers the hardware topology reported by the operating system.
+    ///
+    /// On Linux this reads sysfs below `/sys/devices/system`. Only CPUs reported
+    /// in `cpu/online` are included. A missing NUMA interface is represented as
+    /// one synthetic node rather than treated as a discovery failure.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TopologyError`] when the platform is unsupported, a required
+    /// topology file cannot be read or parsed, or the reported CPU-to-NUMA
+    /// memberships are inconsistent.
+    pub fn discover() -> Result<Self, TopologyError> {
+        #[cfg(target_os = "linux")]
+        {
+            let sysfs_root = std::path::Path::new("/sys/devices/system");
+            linux::discover_from(sysfs_root)
+        }
+
+        #[cfg(not(target_os = "linux"))]
+        {
+            Err(TopologyError::UnsupportedPlatform)
+        }
+    }
     /// Returns all online logical CPUs in ascending identifier order.
     pub fn logical_cpus(&self) -> &[LogicalCpu] {
         &self.logical_cpus
@@ -181,27 +251,60 @@ impl Topology {
         self.numa_nodes.len()
     }
 }
-
+/// Failure while reading, parsing, or validating hardware-topology data.
+///
+/// Discovery treats operating-system topology information as untrusted input:
+/// files may disappear during CPU hotplug, contain identifiers that cannot be
+/// parsed, or describe inconsistent CPU-to-NUMA-node relationships. These
+/// errors preserve enough context to identify the failing file or relation.
 #[derive(Debug)]
 pub enum TopologyError {
+    /// Hardware-topology discovery is not implemented for the current platform.
+    UnsupportedPlatform,
+    /// A Linux list of operating-system identifiers is malformed.
+    ///
+    /// This includes invalid integers, descending ranges, duplicate identifiers,
+    /// and ranges with a number of bounds other than two.
     InvalidIdList {
+        /// The complete list, or malformed list element, that could not be parsed.
         input: String,
+        /// Human-readable explanation of the violated list rule.
         reason: &'static str,
     },
+    /// A topology file could not be read.
     Io {
+        /// Exact sysfs path whose read operation failed.
         path: std::path::PathBuf,
+        /// Original operating-system I/O error.
         error: std::io::Error,
     },
+    /// A topology file expected to contain one signed integer was malformed.
     InvalidInteger {
+        /// Exact sysfs path containing the malformed value.
         path: std::path::PathBuf,
+        /// Original integer parsing error.
         value: std::num::ParseIntError,
     },
+    /// One online logical CPU was associated with more than one NUMA node.
+    ///
+    /// A valid topology requires every online CPU to have exactly one NUMA
+    /// association. Accepting both nodes would make future scheduling and data
+    /// placement decisions ambiguous.
     CpuInMultipleNumaNodes {
+        /// Logical CPU with conflicting NUMA memberships.
         cpu: CpuId,
+        /// NUMA node encountered first while constructing the topology.
         first: NumaNodeId,
+        /// Later NUMA node that reported the same logical CPU.
         second: NumaNodeId,
     },
+    /// An online logical CPU was not associated with any discovered NUMA node.
+    ///
+    /// On systems without a NUMA sysfs interface, discovery creates one
+    /// synthetic node containing every online CPU. This error therefore denotes
+    /// an inconsistent exposed NUMA topology rather than an ordinary UMA host.
     CpuWithoutNumaNode {
+        /// Online logical CPU for which no NUMA membership was found.
         cpu: CpuId,
     },
 }

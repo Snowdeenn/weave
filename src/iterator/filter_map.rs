@@ -2,7 +2,9 @@ use super::*;
 
 /// Lazy, order-preserving filtering and mapping adapter.
 pub struct FilterMap<I, F> {
+    /// Source iterator whose items are inspected and optionally transformed.
     pub base: I,
+    /// Operation returning `Some` for an output item or `None` to discard it.
     pub op: F,
 }
 
