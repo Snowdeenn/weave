@@ -1,8 +1,9 @@
 # Weave
 
 Une bibliothèque Rust de calcul parallèle : pool de threads, véritable vol de tâches
-entre workers, priorités, tâches empruntant des données et itérateurs parallèles.
-Elle utilise uniquement la bibliothèque standard.
+entre workers, priorités, tâches empruntant des données, itérateurs parallèles et
+description de la topologie matérielle. Elle utilise uniquement la bibliothèque
+standard.
 
 ## Démarrage
 
@@ -18,7 +19,9 @@ let ticket = pool.submit(|| 6 * 7);
 assert_eq!(ticket.join().unwrap(), 42);
 ```
 
-Lancer la démonstration complète : `cargo run --example tour`.
+Lancer la démonstration complète : `cargo run --example tour`. Sous Linux,
+`cargo run --example topology` affiche les CPU logiques, cœurs physiques,
+packages et nœuds NUMA découverts.
 Le [rapport de réalisation](docs/RAPPORT_REALISATION.md) explique le projet
 pour un lecteur non spécialiste et propose un déroulé de présentation.
 
@@ -48,7 +51,9 @@ Importer `weave::iter::*`, puis utiliser :
 - `(0usize..1000).parallelize()` ;
 - `slice.iter_parallel()`, `slice.iter_parallel_mut()` ;
 - `slice.chunks_parallel(taille)`, avec conservation du dernier morceau incomplet ;
-- `for_each`, `map`, `fold`, `reduce`, `fill` et `collect`.
+- les adaptateurs paresseux `map`, `filter`, `filter_map` et `enumerate` ;
+- les opérations terminales `for_each`, `fold`, `reduce`, `collect`, `count`,
+  `sum`, `min`, `max`, `find`, `find_first`, `find_any`, `extend` et `fill`.
 
 `map` est paresseux : le calcul démarre avec une opération terminale.
 `collect()` renvoie un `Vec` ordonné. `fill(&mut sortie)` exige exactement
@@ -69,6 +74,31 @@ par leur conversion automatique en slice.
 
 `ChunksAligned` signifie « découpé aux frontières des morceaux » :
 cela ne garantit pas un alignement mémoire SIMD.
+
+## Topologie matérielle
+
+```rust,no_run
+use weave::topology::Topology;
+
+let topology = Topology::discover()?;
+println!("CPU logiques : {}", topology.logical_cpu_count());
+println!("Cœurs physiques : {}", topology.physical_core_count());
+println!("Packages : {}", topology.package_count());
+println!("Nœuds NUMA : {}", topology.numa_node_count());
+# Ok::<(), weave::topology::TopologyError>(())
+```
+
+La découverte est actuellement disponible sous Linux et lit les informations
+exposées par `sysfs` dans `/sys/devices/system`. Seuls les CPU en ligne sont
+inclus. Sur une machine sans interface NUMA exposée, Weave représente la mémoire
+uniforme par un nœud synthétique d'identifiant zéro. Sur les autres plateformes,
+`Topology::discover()` renvoie `TopologyError::UnsupportedPlatform`.
+
+Cette API décrit passivement les relations entre CPU logiques, cœurs physiques,
+packages et nœuds NUMA. Elle ne choisit pas le nombre de workers, ne fixe pas leur
+affinité, ne place pas la mémoire et ne modifie pas encore la politique de vol de
+tâches. Elle constitue la couche de découverte nécessaire à une future
+ordonnance topology-aware.
 
 ## Stockage par worker
 
@@ -118,7 +148,8 @@ synchronisation centralisée : aucune prétention à égaler les performances de
 
 Le seuil de découpage est de 512 éléments. Le vol est mesurable avec
 `pool.steal_count()`. Il n'existe pas encore de benchmark comparatif, de
-garantie de temps réel, d'annulation ou de pool redimensionnable.
+garantie de temps réel, d'annulation, de pool redimensionnable, d'affinité CPU
+ou de politique de vol utilisant la topologie découverte.
 Deux effacements internes de durée de vie restent nécessaires aux tâches
 empruntées ; leurs invariants sont commentés et testés, sans constituer une
 preuve formelle de sûreté mémoire.
@@ -133,11 +164,13 @@ cargo test --doc
 cargo test --release
 cargo rustdoc --lib -- -D warnings -D missing-docs
 cargo run --example tour
+# Linux uniquement :
+cargo run --example topology
 ```
 
-La CI est configurée pour Windows et Linux. La validation locale de cette
-réalisation est faite sous Windows avec Rust 1.98.0 ; le workflow distant
-doit encore s'exécuter pour confirmer Linux.
+La CI est configurée pour Windows et Linux. L'exemple `topology` compile sur
+toutes les plateformes, mais sa découverte réelle ne réussit actuellement que
+sous Linux.
 
 ## Migration du prototype
 
