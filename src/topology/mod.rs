@@ -361,6 +361,35 @@ impl std::error::Error for TopologyError {
 }
 
 #[cfg(test)]
+pub(crate) fn topology_fixture(entries: &[(CpuId, CoreId, NumaNodeId)]) -> Topology {
+    let logical_cpus = entries
+        .iter()
+        .map(|&(id, core, numa_node)| LogicalCpu {
+            id,
+            core,
+            numa_node,
+        })
+        .collect::<Vec<_>>();
+
+    let mut cpus_by_node = std::collections::BTreeMap::<NumaNodeId, Vec<CpuId>>::new();
+    for &(cpu, _, node) in entries {
+        cpus_by_node.entry(node).or_default().push(cpu);
+    }
+    let numa_nodes = cpus_by_node
+        .into_iter()
+        .map(|(id, mut cpus)| {
+            cpus.sort_unstable();
+            NumaNode { id, cpus }
+        })
+        .collect();
+
+    Topology {
+        logical_cpus,
+        numa_nodes,
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
