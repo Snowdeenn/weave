@@ -5,3 +5,4 @@ edition = "2024"
 description = "Ergonomic work-stealing thread pool with parallel iterators"
 
 [dependencies]
+libc = "0.2.189"
