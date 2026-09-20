@@ -12,6 +12,7 @@ mod scope;
 mod storage;
 /// Passive description of the machine's hardware topology.
 pub mod topology;
+pub mod affinity;
 
 pub use builder::ThreadPoolBuilder;
 pub use error::BuildError;
