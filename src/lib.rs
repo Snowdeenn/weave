@@ -10,6 +10,7 @@ mod job;
 mod layout;
 mod pool;
 mod scope;
+mod steal;
 mod storage;
 /// Passive description of the machine's hardware topology.
 pub mod topology;

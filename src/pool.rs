@@ -1,6 +1,6 @@
 use crate::{
     BuildError, IntoJob, Job, JoinHandle, Priority, ThreadPoolBuilder, WorkerLayout,
-    affinity::pin_current_thread, handle::JobState,
+    affinity::pin_current_thread, handle::JobState, steal::StealPlan,
 };
 use std::{
     cell::RefCell,
@@ -15,6 +15,7 @@ struct Scheduler {
     pending: usize,
     shutdown: bool,
     steals: usize,
+    steal_plan: StealPlan,
 }
 pub(crate) struct SharedPoolData {
     scheduler: Mutex<Scheduler>,
@@ -44,8 +45,7 @@ impl Scheduler {
             if let Some(job) = self.global[priority].pop_front() {
                 return Some(job);
             }
-            for offset in 1..self.local.len() {
-                let victim = (index + offset) % self.local.len();
+            for &victim in self.steal_plan.victims_for(index) {
                 if let Some(job) = self.local[victim][priority].pop_front() {
                     self.steals += 1;
                     return Some(job);
@@ -111,7 +111,8 @@ impl ThreadPool {
         Self::try_new(num_threads, thread_name).expect("cannot build weave pool")
     }
     pub(crate) fn try_new(num_threads: usize, thread_name: String) -> Result<Self, BuildError> {
-        let mut pool = Self::unstarted(num_threads, &thread_name)?;
+        let steal_plan = StealPlan::circular(num_threads);
+        let mut pool = Self::prepare(num_threads, &thread_name, steal_plan)?;
         for index in 0..num_threads {
             let shared = pool.shared.clone();
             match std::thread::Builder::new()
@@ -130,7 +131,8 @@ impl ThreadPool {
         thread_name: String,
     ) -> Result<ThreadPool, BuildError> {
         let num_threads = layout.worker_count();
-        let mut pool = Self::unstarted(num_threads, &thread_name)?;
+        let steal_plan = StealPlan::topology_aware(&layout);
+        let mut pool = Self::prepare(num_threads, &thread_name, steal_plan)?;
         let (tx, rx) = std::sync::mpsc::channel::<Result<(), BuildError>>();
         for worker in layout.workers() {
             let shared = pool.shared.clone();
@@ -169,7 +171,11 @@ impl ThreadPool {
         Ok(pool)
     }
 
-    fn unstarted(num_threads: usize, thread_name: &str) -> Result<Self, BuildError> {
+    fn prepare(
+        num_threads: usize,
+        thread_name: &str,
+        steal_plan: StealPlan,
+    ) -> Result<Self, BuildError> {
         if num_threads == 0 {
             return Err(BuildError::ZeroThreads);
         }
@@ -183,6 +189,7 @@ impl ThreadPool {
                 pending: 0,
                 shutdown: false,
                 steals: 0,
+                steal_plan,
             }),
             wake: Condvar::new(),
         });
