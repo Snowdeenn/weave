@@ -6,11 +6,12 @@
 //! turns those facts into an explicit decision about how many workers should
 //! exist and which logical CPU each worker is intended to use.
 //!
-//! A layout is only a plan. Constructing one does not create threads and does
-//! not ask the operating system to pin a worker to a CPU. Until a later CPU-
-//! affinity layer applies the plan, the operating system may execute a worker
-//! on a different CPU. Keeping planning separate from enforcement lets layout
-//! policies remain deterministic, platform-independent, and easy to test.
+//! A layout is only a plan. Constructing one does not create threads or ask the
+//! operating system to pin a worker to a CPU. Passing it to
+//! [`ThreadPoolBuilder::worker_layout`](crate::ThreadPoolBuilder::worker_layout)
+//! applies the plan while the pool starts. Keeping planning separate from
+//! enforcement lets layout policies remain deterministic, platform-independent,
+//! and easy to test.
 //!
 //! Worker indices are software identities and must not be interpreted as a
 //! measure of hardware proximity. Future schedulers should use the explicit
@@ -31,9 +32,8 @@ use crate::topology::{CoreId, CpuId, NumaNodeId, PackageId};
 /// identity is derived from [`CoreId`], avoiding a second stored value that
 /// could contradict the core's package.
 ///
-/// This value expresses scheduling intent only. It does not guarantee that the
-/// worker thread is running on [`Self::cpu`]; that guarantee will belong to the
-/// future CPU-affinity layer.
+/// This value expresses scheduling intent only. A pool built from its containing
+/// [`WorkerLayout`] applies that intent before accepting work.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct WorkerPlacement {
     worker_index: usize,
@@ -77,9 +77,9 @@ impl WorkerPlacement {
 /// scheduler without borrowing the source topology.
 ///
 /// This type deliberately contains no scheduling or affinity operations. It
-/// answers only "where should each worker be placed?"; later layers will decide
-/// how to enforce that plan and how to use its topology relationships when
-/// selecting work-stealing victims.
+/// answers only "where should each worker be placed?". Pool construction
+/// enforces the CPU placements; future schedulers can also use the recorded
+/// topology relationships when selecting work-stealing victims.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkerLayout {
     workers: Vec<WorkerPlacement>,
@@ -92,8 +92,8 @@ impl WorkerLayout {
     /// are contiguous starting at zero. SMT siblings are retained as distinct
     /// workers because each sibling is a separate logical CPU.
     ///
-    /// This method only constructs a placement plan; it does not create workers
-    /// threads, or apply CPU-affinity.
+    /// This method only constructs a placement plan; it does not create worker
+    /// threads or apply CPU affinity by itself.
     pub fn one_per_logical_cpu(topology: &crate::topology::Topology) -> Self {
         let mut layout = Vec::new();
         for (index, cpu) in topology.logical_cpus().iter().enumerate() {
@@ -120,7 +120,7 @@ impl WorkerLayout {
     /// starting at zero.
     ///
     /// This method only constructs a placement plan; it does not create worker
-    /// threads or apply CPU affinity.
+    /// threads or apply CPU affinity by itself.
     pub fn one_per_physical_core(topology: &crate::topology::Topology) -> Self {
         let mut layout = Vec::new();
         let mut cores: std::collections::HashSet<CoreId> = std::collections::HashSet::new();

@@ -8,7 +8,7 @@ pub struct FixedCount {
     count: usize,
 }
 
-/// Hardware-placement selection, awaiting integration with pool startup.
+/// Hardware-placement selection applied when the pool starts.
 pub struct Planned {
     layout: WorkerLayout,
 }
@@ -36,8 +36,9 @@ pub struct Planned {
 ///     ThreadPoolBuilder::new().worker_layout(layout).num_thread(4);
 /// }
 /// ```
-/// Layout-based construction is not yet available: the planned state stores
-/// configuration until affinity is integrated into worker startup.
+/// Building from a layout creates one worker per placement and binds each
+/// worker to its selected logical CPU before returning the pool. Construction
+/// fails if any worker cannot apply its affinity.
 pub struct ThreadPoolBuilder<State = Automatic> {
     workers: State,
     thread_name: Option<String>,
@@ -122,10 +123,12 @@ impl ThreadPoolBuilder<Planned> {
         self
     }
 
+    /// Builds and pins the workers, panicking if construction fails.
     pub fn build(self) -> ThreadPool {
         self.try_build().expect("cannot build weave pool")
     }
 
+    /// Builds and pins the workers with explicit error handling.
     pub fn try_build(self) -> Result<ThreadPool, BuildError> {
         ThreadPool::try_with_layout(
             self.workers.layout,

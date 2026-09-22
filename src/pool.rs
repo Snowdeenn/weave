@@ -111,27 +111,7 @@ impl ThreadPool {
         Self::try_new(num_threads, thread_name).expect("cannot build weave pool")
     }
     pub(crate) fn try_new(num_threads: usize, thread_name: String) -> Result<Self, BuildError> {
-        if num_threads == 0 {
-            return Err(BuildError::ZeroThreads);
-        }
-        if thread_name.contains('\0') {
-            return Err(BuildError::InvalidThreadName);
-        }
-        let shared = Arc::new(SharedPoolData {
-            scheduler: Mutex::new(Scheduler {
-                global: Default::default(),
-                local: (0..num_threads).map(|_| Queues::default()).collect(),
-                pending: 0,
-                shutdown: false,
-                steals: 0,
-            }),
-            wake: Condvar::new(),
-        });
-        let mut pool = Self {
-            shared,
-            threads: Vec::new(),
-            num_threads,
-        };
+        let mut pool = Self::unstarted(num_threads, &thread_name)?;
         for index in 0..num_threads {
             let shared = pool.shared.clone();
             match std::thread::Builder::new()
@@ -145,33 +125,12 @@ impl ThreadPool {
         Ok(pool)
     }
 
-    pub fn try_with_layout(
+    pub(crate) fn try_with_layout(
         layout: WorkerLayout,
         thread_name: String,
     ) -> Result<ThreadPool, BuildError> {
         let num_threads = layout.worker_count();
-
-        if num_threads == 0 {
-            return Err(BuildError::ZeroThreads);
-        }
-        if thread_name.contains('\0') {
-            return Err(BuildError::InvalidThreadName);
-        }
-        let shared = Arc::new(SharedPoolData {
-            scheduler: Mutex::new(Scheduler {
-                global: Default::default(),
-                local: (0..num_threads).map(|_| Queues::default()).collect(),
-                pending: 0,
-                shutdown: false,
-                steals: 0,
-            }),
-            wake: Condvar::new(),
-        });
-        let mut pool = Self {
-            shared,
-            threads: Vec::new(),
-            num_threads,
-        };
+        let mut pool = Self::unstarted(num_threads, &thread_name)?;
         let (tx, rx) = std::sync::mpsc::channel::<Result<(), BuildError>>();
         for worker in layout.workers() {
             let shared = pool.shared.clone();
@@ -208,6 +167,30 @@ impl ThreadPool {
         // On failure, dropping the local pool stops and joins its workers.
         wait_for_startup(&rx, num_threads)?;
         Ok(pool)
+    }
+
+    fn unstarted(num_threads: usize, thread_name: &str) -> Result<Self, BuildError> {
+        if num_threads == 0 {
+            return Err(BuildError::ZeroThreads);
+        }
+        if thread_name.contains('\0') {
+            return Err(BuildError::InvalidThreadName);
+        }
+        let shared = Arc::new(SharedPoolData {
+            scheduler: Mutex::new(Scheduler {
+                global: Default::default(),
+                local: (0..num_threads).map(|_| Queues::default()).collect(),
+                pending: 0,
+                shutdown: false,
+                steals: 0,
+            }),
+            wake: Condvar::new(),
+        });
+        Ok(Self {
+            shared,
+            threads: Vec::new(),
+            num_threads,
+        })
     }
     /// Worker count.
     pub fn num_threads(&self) -> usize {

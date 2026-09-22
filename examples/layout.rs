@@ -1,4 +1,4 @@
-use weave::{WorkerLayout, topology::Topology};
+use weave::{ThreadPoolBuilder, WorkerLayout, topology::Topology};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let topology = Topology::discover()?;
@@ -8,5 +8,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("{logical:#?}");
     println!("{physical:#?}");
+
+    let pool = ThreadPoolBuilder::new()
+        .thread_name("weave-physical")
+        .worker_layout(physical)
+        .try_build()?;
+    println!("started {} pinned workers", pool.num_threads());
+
     Ok(())
 }
