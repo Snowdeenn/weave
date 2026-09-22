@@ -275,51 +275,6 @@ fn wait_for_startup(
     Ok(())
 }
 
-#[cfg(test)]
-mod startup_tests {
-    use super::*;
-    use crate::{affinity::AffinityError, topology::CpuId};
-    use std::sync::mpsc;
-
-    #[test]
-    fn accepts_all_confirmations_even_after_senders_are_dropped() {
-        let (tx, rx) = mpsc::channel();
-        tx.send(Ok(())).unwrap();
-        tx.send(Ok(())).unwrap();
-        drop(tx);
-        assert!(wait_for_startup(&rx, 2).is_ok());
-    }
-
-    #[test]
-    fn propagates_affinity_failure_after_an_earlier_success() {
-        let (tx, rx) = mpsc::channel();
-        let cpu = CpuId::new(1234);
-        tx.send(Ok(())).unwrap();
-        tx.send(Err(BuildError::Affinity {
-            worker_index: 1,
-            cpu,
-            source: AffinityError::CpuOutOfRange(cpu),
-        }))
-        .unwrap();
-        drop(tx);
-        assert!(matches!(wait_for_startup(&rx, 2),
-            Err(BuildError::Affinity { worker_index: 1, cpu: actual,
-                source: AffinityError::CpuOutOfRange(source_cpu) })
-                if actual == cpu && source_cpu == cpu));
-    }
-
-    #[test]
-    fn rejects_disconnection_when_a_confirmation_is_missing() {
-        let (tx, rx) = mpsc::channel();
-        tx.send(Ok(())).unwrap();
-        drop(tx);
-        let error = wait_for_startup(&rx, 2).unwrap_err();
-        assert!(matches!(error, BuildError::StartupDisconnected(_)));
-        assert!(std::error::Error::source(&error).is_some());
-        assert!(error.to_string().contains("before all confirmations"));
-    }
-}
-
 pub(crate) fn join_on<A: Send, B>(
     shared: &Arc<SharedPoolData>,
     left: impl FnOnce() -> A + Send,
@@ -391,5 +346,50 @@ impl Drop for ThreadPool {
         for thread in self.threads.drain(..) {
             let _ = thread.join();
         }
+    }
+}
+
+#[cfg(test)]
+mod startup_tests {
+    use super::*;
+    use crate::{affinity::AffinityError, topology::CpuId};
+    use std::sync::mpsc;
+
+    #[test]
+    fn accepts_all_confirmations_even_after_senders_are_dropped() {
+        let (tx, rx) = mpsc::channel();
+        tx.send(Ok(())).unwrap();
+        tx.send(Ok(())).unwrap();
+        drop(tx);
+        assert!(wait_for_startup(&rx, 2).is_ok());
+    }
+
+    #[test]
+    fn propagates_affinity_failure_after_an_earlier_success() {
+        let (tx, rx) = mpsc::channel();
+        let cpu = CpuId::new(1234);
+        tx.send(Ok(())).unwrap();
+        tx.send(Err(BuildError::Affinity {
+            worker_index: 1,
+            cpu,
+            source: AffinityError::CpuOutOfRange(cpu),
+        }))
+        .unwrap();
+        drop(tx);
+        assert!(matches!(wait_for_startup(&rx, 2),
+            Err(BuildError::Affinity { worker_index: 1, cpu: actual,
+                source: AffinityError::CpuOutOfRange(source_cpu) })
+                if actual == cpu && source_cpu == cpu));
+    }
+
+    #[test]
+    fn rejects_disconnection_when_a_confirmation_is_missing() {
+        let (tx, rx) = mpsc::channel();
+        tx.send(Ok(())).unwrap();
+        drop(tx);
+        let error = wait_for_startup(&rx, 2).unwrap_err();
+        assert!(matches!(error, BuildError::StartupDisconnected(_)));
+        assert!(std::error::Error::source(&error).is_some());
+        assert!(error.to_string().contains("before all confirmations"));
     }
 }

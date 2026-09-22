@@ -14,6 +14,7 @@ mod storage;
 /// Passive description of the machine's hardware topology.
 pub mod topology;
 
+pub use affinity::AffinityError;
 pub use builder::{Automatic, FixedCount, Planned, ThreadPoolBuilder};
 pub use error::BuildError;
 pub use handle::JoinHandle;

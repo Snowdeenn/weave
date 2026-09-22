@@ -9,10 +9,14 @@ pub enum BuildError {
     Spawn(std::io::Error),
     /// The startup channel closed before every worker confirmed initialization.
     StartupDisconnected(std::sync::mpsc::RecvError),
+    /// A worker could not apply its requested CPU placement during startup.
     Affinity {
+        /// Index of the worker whose initialization failed.
         worker_index: usize,
+        /// Logical CPU requested for that worker.
         cpu: crate::topology::CpuId,
-        source: crate::affinity::AffinityError,
+        /// Underlying affinity failure.
+        source: crate::AffinityError,
     },
 }
 impl std::fmt::Display for BuildError {
@@ -33,7 +37,8 @@ impl std::fmt::Display for BuildError {
                 source,
             } => write!(
                 f,
-                "Could not pin worker {worker_index}, on cpu {cpu:?}: {source:?}"
+                "cannot pin worker {worker_index} to CPU {}: {source}",
+                cpu.get()
             ),
         }
     }
@@ -43,6 +48,7 @@ impl std::error::Error for BuildError {
         match self {
             Self::Spawn(e) => Some(e),
             Self::StartupDisconnected(e) => Some(e),
+            Self::Affinity { source, .. } => Some(source),
             _ => None,
         }
     }
