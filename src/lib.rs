@@ -23,6 +23,7 @@ pub use job::{IntoJob, Job, Priority};
 pub use layout::{WorkerLayout, WorkerPlacement};
 pub use pool::ThreadPool;
 pub use scope::Scope;
+pub use steal::StealStats;
 pub use storage::local::{WorkerLocal, WorkerLocalError};
 /// Parallel iteration traits and extensions.
 pub mod iter {

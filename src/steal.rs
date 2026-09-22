@@ -1,10 +1,45 @@
-use crate::WorkerLayout;
+//! Deterministic victim orders computed once during pool construction.
+//!
+//! Pools without a layout use circular order. Layout-based pools prefer the
+//! same physical core, then other cores in the same NUMA node, then remote
+//! nodes. Within each category, layout order breaks ties. These are scheduling
+//! heuristics, not guarantees about cache contents or memory placement.
+//! Priorities and local/global queue selection remain the scheduler's concern.
 
+use crate::{WorkerLayout, WorkerPlacement};
+
+/// Snapshot of successful transfers from other workers' local queues.
+///
+/// Categories are mutually exclusive and describe planned worker placements,
+/// not the location of task data or measured memory traffic. Local pops, global
+/// queue pops and unsuccessful steal attempts do not increment these counters.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct StealStats {
+    /// Transfers between workers sharing a physical core.
+    pub same_core: usize,
+    /// Transfers within a NUMA node, excluding same-core transfers.
+    pub same_numa: usize,
+    /// Transfers between different NUMA nodes.
+    pub remote_numa: usize,
+    /// Transfers in pools constructed without hardware placements.
+    pub unknown: usize,
+}
+
+impl StealStats {
+    /// Returns the total number of successful steals in this snapshot.
+    pub fn total(&self) -> usize {
+        self.same_core + self.same_numa + self.remote_numa + self.unknown
+    }
+}
+
+/// One victim list per worker, excluding itself and containing no duplicates.
 pub(crate) struct StealPlan {
     victims: Vec<Vec<usize>>,
+    placements: Option<Vec<WorkerPlacement>>,
 }
 
 impl StealPlan {
+    /// Visits subsequent indices, wrapping to zero after the final worker.
     pub(crate) fn circular(worker_count: usize) -> Self {
         let mut victims = Vec::new();
         for curr_worker in 0..worker_count {
@@ -15,9 +50,13 @@ impl StealPlan {
             }
             victims.push(workers);
         }
-        StealPlan { victims }
+        StealPlan {
+            victims,
+            placements: None,
+        }
     }
 
+    /// Prefers same-core, same-node, then remote victims in layout order.
     pub(crate) fn topology_aware(layout: &WorkerLayout) -> Self {
         let mut victims = Vec::new();
         for curr_worker in layout.workers() {
@@ -44,11 +83,33 @@ impl StealPlan {
             victims.push(workers);
         }
 
-        StealPlan { victims }
+        StealPlan {
+            victims,
+            placements: Some(layout.workers().to_vec()),
+        }
     }
 
+    /// Returns the ordered victims for a valid worker index.
     pub(crate) fn victims_for(&self, worker_index: usize) -> &[usize] {
         &self.victims[worker_index]
+    }
+
+    /// Classifies one successful transfer using the saved placement metadata.
+    pub(crate) fn record_steal(&self, thief: usize, victim: usize, stats: &mut StealStats) {
+        match &self.placements {
+            None => stats.unknown += 1,
+            Some(placements) => {
+                let source = &placements[thief];
+                let target = &placements[victim];
+                if source.core() == target.core() {
+                    stats.same_core += 1;
+                } else if source.numa_node() == target.numa_node() {
+                    stats.same_numa += 1;
+                } else {
+                    stats.remote_numa += 1;
+                }
+            }
+        }
     }
 }
 

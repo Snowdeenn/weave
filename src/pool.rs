@@ -14,7 +14,7 @@ struct Scheduler {
     local: Vec<Queues>,
     pending: usize,
     shutdown: bool,
-    steals: usize,
+    steals: crate::StealStats,
     steal_plan: StealPlan,
 }
 pub(crate) struct SharedPoolData {
@@ -47,7 +47,8 @@ impl Scheduler {
             }
             for &victim in self.steal_plan.victims_for(index) {
                 if let Some(job) = self.local[victim][priority].pop_front() {
-                    self.steals += 1;
+                    self.steal_plan
+                        .record_steal(index, victim, &mut self.steals);
                     return Some(job);
                 }
             }
@@ -188,7 +189,7 @@ impl ThreadPool {
                 local: (0..num_threads).map(|_| Queues::default()).collect(),
                 pending: 0,
                 shutdown: false,
-                steals: 0,
+                steals: Default::default(),
                 steal_plan,
             }),
             wake: Condvar::new(),
@@ -205,6 +206,10 @@ impl ThreadPool {
     }
     /// Count of actual transfers from another worker's local deque.
     pub fn steal_count(&self) -> usize {
+        self.steal_stats().total()
+    }
+    /// Returns a consistent snapshot of successful steals by placement proximity.
+    pub fn steal_stats(&self) -> crate::StealStats {
         self.shared.scheduler.lock().unwrap().steals
     }
     /// Schedule detached work. The panic hook reports failures; workers survive.
@@ -336,6 +341,138 @@ impl Drop for ThreadPool {
         for thread in self.threads.drain(..) {
             let _ = thread.join();
         }
+    }
+}
+
+#[cfg(test)]
+mod scheduler_tests {
+    use super::*;
+    use crate::topology::{CoreId, CpuId, NumaNodeId, PackageId, topology_fixture};
+
+    fn scheduler() -> Scheduler {
+        // CPU order deliberately differs from proximity order for worker 0.
+        let entries = [(0, 0, 0), (1, 0, 1), (0, 1, 0), (0, 0, 0)];
+        let entries = entries
+            .into_iter()
+            .enumerate()
+            .map(|(cpu, (package, core, node))| {
+                (
+                    CpuId::new(cpu),
+                    CoreId::new(PackageId::new(package), core),
+                    NumaNodeId::new(node),
+                )
+            })
+            .collect::<Vec<_>>();
+        let layout = WorkerLayout::one_per_logical_cpu(&topology_fixture(&entries));
+        Scheduler {
+            global: Default::default(),
+            local: (0..4).map(|_| Queues::default()).collect(),
+            pending: 0,
+            shutdown: false,
+            steals: Default::default(),
+            steal_plan: StealPlan::topology_aware(&layout),
+        }
+    }
+
+    fn job(label: &'static str) -> Job {
+        Job::new(|| {}).set_label(label)
+    }
+
+    fn take_label(scheduler: &mut Scheduler, worker: usize) -> &'static str {
+        scheduler
+            .take(worker)
+            .expect("expected a queued job")
+            .label()
+            .unwrap()
+    }
+
+    #[test]
+    fn takes_sibling_then_local_node_then_remote_and_counts_only_transfers() {
+        let mut scheduler = scheduler();
+        let priority = Priority::Normal.index();
+        scheduler.local[1][priority].push_back(job("remote"));
+        scheduler.local[2][priority].push_back(job("same node"));
+        scheduler.local[3][priority].push_back(job("sibling oldest"));
+        scheduler.local[3][priority].push_back(job("sibling newest"));
+        assert_eq!(take_label(&mut scheduler, 0), "sibling oldest");
+        assert_eq!(take_label(&mut scheduler, 0), "sibling newest");
+        assert_eq!(take_label(&mut scheduler, 0), "same node");
+        assert_eq!(take_label(&mut scheduler, 0), "remote");
+        assert!(scheduler.take(0).is_none());
+        assert_eq!(
+            scheduler.steals,
+            crate::StealStats {
+                same_core: 2,
+                same_numa: 1,
+                remote_numa: 1,
+                unknown: 0,
+            }
+        );
+        assert_eq!(scheduler.steals.total(), 4);
+    }
+
+    #[test]
+    fn local_lifo_and_global_fifo_precede_stealing_at_equal_priority() {
+        let mut scheduler = scheduler();
+        let priority = Priority::Normal.index();
+        scheduler.local[0][priority].push_back(job("local oldest"));
+        scheduler.local[0][priority].push_back(job("local newest"));
+        scheduler.global[priority].push_back(job("global oldest"));
+        scheduler.global[priority].push_back(job("global newest"));
+        scheduler.local[3][priority].push_back(job("stolen"));
+        for expected in [
+            "local newest",
+            "local oldest",
+            "global oldest",
+            "global newest",
+        ] {
+            assert_eq!(take_label(&mut scheduler, 0), expected);
+            assert_eq!(scheduler.steals.total(), 0);
+        }
+        assert_eq!(take_label(&mut scheduler, 0), "stolen");
+        assert_eq!(scheduler.steals.same_core, 1);
+    }
+
+    #[test]
+    fn priority_precedes_queue_locality_and_victim_proximity() {
+        let mut scheduler = scheduler();
+        scheduler.local[0][Priority::Low.index()].push_back(job("local low"));
+        scheduler.global[Priority::Normal.index()].push_back(job("global normal"));
+        scheduler.local[3][Priority::Normal.index()].push_back(job("sibling normal"));
+        scheduler.local[1][Priority::High.index()].push_back(job("remote high"));
+        for expected in [
+            "remote high",
+            "global normal",
+            "sibling normal",
+            "local low",
+        ] {
+            assert_eq!(take_label(&mut scheduler, 0), expected);
+        }
+        assert_eq!(scheduler.steals.total(), 2);
+    }
+
+    #[test]
+    fn circular_plan_wraps_and_records_unknown_topology() {
+        let mut scheduler = scheduler();
+        scheduler.steal_plan = StealPlan::circular(4);
+        for victim in [0, 1, 3] {
+            scheduler.local[victim][Priority::Normal.index()].push_back(job(match victim {
+                0 => "zero",
+                1 => "one",
+                _ => "three",
+            }));
+        }
+        for expected in ["three", "zero", "one"] {
+            assert_eq!(take_label(&mut scheduler, 2), expected);
+        }
+        assert!(scheduler.take(2).is_none());
+        assert_eq!(
+            scheduler.steals,
+            crate::StealStats {
+                unknown: 3,
+                ..Default::default()
+            }
+        );
     }
 }
 
