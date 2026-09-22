@@ -1,4 +1,7 @@
-use crate::{BuildError, IntoJob, Job, JoinHandle, Priority, ThreadPoolBuilder, handle::JobState};
+use crate::{
+    BuildError, IntoJob, Job, JoinHandle, Priority, ThreadPoolBuilder, WorkerLayout,
+    affinity::pin_current_thread, handle::JobState,
+};
 use std::{
     cell::RefCell,
     collections::VecDeque,
@@ -141,6 +144,71 @@ impl ThreadPool {
         }
         Ok(pool)
     }
+
+    pub fn try_with_layout(
+        layout: WorkerLayout,
+        thread_name: String,
+    ) -> Result<ThreadPool, BuildError> {
+        let num_threads = layout.worker_count();
+
+        if num_threads == 0 {
+            return Err(BuildError::ZeroThreads);
+        }
+        if thread_name.contains('\0') {
+            return Err(BuildError::InvalidThreadName);
+        }
+        let shared = Arc::new(SharedPoolData {
+            scheduler: Mutex::new(Scheduler {
+                global: Default::default(),
+                local: (0..num_threads).map(|_| Queues::default()).collect(),
+                pending: 0,
+                shutdown: false,
+                steals: 0,
+            }),
+            wake: Condvar::new(),
+        });
+        let mut pool = Self {
+            shared,
+            threads: Vec::new(),
+            num_threads,
+        };
+        let (tx, rx) = std::sync::mpsc::channel::<Result<(), BuildError>>();
+        for worker in layout.workers() {
+            let shared = pool.shared.clone();
+            let worker_index = worker.worker_index();
+            let worker_tx = tx.clone();
+            let worker_cpu = worker.cpu();
+
+            match std::thread::Builder::new()
+                .name(format!("{thread_name}-{worker_index}"))
+                .spawn(move || {
+                    match pin_current_thread(worker_cpu) {
+                        Ok(()) => {
+                            if worker_tx.send(Ok(())).is_err() {
+                                return;
+                            }
+                        }
+                        Err(e) => {
+                            let _ = worker_tx.send(Err(BuildError::Affinity {
+                                worker_index,
+                                source: e,
+                                cpu: worker_cpu,
+                            }));
+                            return;
+                        }
+                    }
+                    drop(worker_tx);
+                    worker_loop(shared, worker_index)
+                }) {
+                Ok(thread) => pool.threads.push(thread),
+                Err(error) => return Err(BuildError::Spawn(error)),
+            }
+        }
+        drop(tx);
+        // On failure, dropping the local pool stops and joins its workers.
+        wait_for_startup(&rx, num_threads)?;
+        Ok(pool)
+    }
     /// Worker count.
     pub fn num_threads(&self) -> usize {
         self.num_threads
@@ -197,6 +265,61 @@ impl ThreadPool {
         join_on(&self.shared, f, || ()).0
     }
 }
+fn wait_for_startup(
+    rx: &std::sync::mpsc::Receiver<Result<(), BuildError>>,
+    num_threads: usize,
+) -> Result<(), BuildError> {
+    for _ in 0..num_threads {
+        rx.recv().map_err(BuildError::StartupDisconnected)??;
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod startup_tests {
+    use super::*;
+    use crate::{affinity::AffinityError, topology::CpuId};
+    use std::sync::mpsc;
+
+    #[test]
+    fn accepts_all_confirmations_even_after_senders_are_dropped() {
+        let (tx, rx) = mpsc::channel();
+        tx.send(Ok(())).unwrap();
+        tx.send(Ok(())).unwrap();
+        drop(tx);
+        assert!(wait_for_startup(&rx, 2).is_ok());
+    }
+
+    #[test]
+    fn propagates_affinity_failure_after_an_earlier_success() {
+        let (tx, rx) = mpsc::channel();
+        let cpu = CpuId::new(1234);
+        tx.send(Ok(())).unwrap();
+        tx.send(Err(BuildError::Affinity {
+            worker_index: 1,
+            cpu,
+            source: AffinityError::CpuOutOfRange(cpu),
+        }))
+        .unwrap();
+        drop(tx);
+        assert!(matches!(wait_for_startup(&rx, 2),
+            Err(BuildError::Affinity { worker_index: 1, cpu: actual,
+                source: AffinityError::CpuOutOfRange(source_cpu) })
+                if actual == cpu && source_cpu == cpu));
+    }
+
+    #[test]
+    fn rejects_disconnection_when_a_confirmation_is_missing() {
+        let (tx, rx) = mpsc::channel();
+        tx.send(Ok(())).unwrap();
+        drop(tx);
+        let error = wait_for_startup(&rx, 2).unwrap_err();
+        assert!(matches!(error, BuildError::StartupDisconnected(_)));
+        assert!(std::error::Error::source(&error).is_some());
+        assert!(error.to_string().contains("before all confirmations"));
+    }
+}
+
 pub(crate) fn join_on<A: Send, B>(
     shared: &Arc<SharedPoolData>,
     left: impl FnOnce() -> A + Send,

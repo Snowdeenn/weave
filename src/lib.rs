@@ -1,5 +1,6 @@
 //! A work-stealing pool with scoped tasks and parallel iterators.
 //! Use [ThreadPool::install] to select a pool; iterators otherwise run sequentially.
+mod affinity;
 mod builder;
 mod cache_padded;
 mod error;
@@ -12,9 +13,8 @@ mod scope;
 mod storage;
 /// Passive description of the machine's hardware topology.
 pub mod topology;
-pub mod affinity;
 
-pub use builder::ThreadPoolBuilder;
+pub use builder::{Automatic, FixedCount, Planned, ThreadPoolBuilder};
 pub use error::BuildError;
 pub use handle::JoinHandle;
 pub use job::{IntoJob, Job, Priority};
