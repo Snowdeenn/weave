@@ -14,6 +14,7 @@ mod steal;
 mod storage;
 /// Passive description of the machine's hardware topology.
 pub mod topology;
+pub mod memory;
 
 pub use affinity::AffinityError;
 pub use builder::{Automatic, FixedCount, Planned, ThreadPoolBuilder};
