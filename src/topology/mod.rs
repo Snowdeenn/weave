@@ -35,7 +35,7 @@
 use std::collections::HashSet;
 
 #[cfg(target_os = "linux")]
-mod linux;
+pub(crate) mod linux;
 
 /// Operating-system identifier of a logical CPU.
 ///

@@ -1,16 +1,63 @@
-use super::MemoryError;
-struct Mapping {
-    adr: *mut u8,
-    length: usize,
+use super::{MemoryError, NumaPolicy};
+use crate::topology::NumaNodeId;
+
+/// A single-node Linux bitmask and the raw syscall's `maxnode` argument.
+/// Linux's get_nodes decrements maxnode before reading the mask, so this
+/// argument is one greater than the number of meaningful bits, not a word count.
+#[derive(Debug)]
+struct NodeMask {
+    words: Vec<libc::c_ulong>,
+    max_node: libc::c_ulong,
 }
 
-impl Mapping {
+impl NodeMask {
+    fn try_new(id: NumaNodeId, known_nodes: &[NumaNodeId]) -> Result<Self, MemoryError> {
+        // Check membership before allocating: IDs are sparse, not array indices.
+        if !known_nodes.contains(&id) {
+            return Err(MemoryError::UnknownNode(id));
+        }
+        // Linux's get_nodes() decrements the raw syscall's maxnode argument
+        // before reading the mask. To include bit `id`, it must therefore see
+        // id + 1 bits AFTER that decrement: pass id + 2, not id + 1.
+        // For node 0, the mask is [0b1]: maxnode = 1 becomes 0, so Linux treats
+        // it as an empty node set and MPOL_BIND fails with EINVAL. Passing 2
+        // makes Linux read one bit and correctly select node 0.
+        // This extra unit belongs to the syscall argument, not to the mask:
+        // the number of allocated words below still only needs to cover `id`.
+        // Reference: Linux mm/mempolicy.c, get_nodes().
+        let max_node = id
+            .get()
+            .checked_add(2)
+            .and_then(|count| libc::c_ulong::try_from(count).ok())
+            .ok_or(MemoryError::InvalidNodeId(id))?;
+        let bits = libc::c_ulong::BITS as usize;
+        let word_index = id.get() / bits;
+        let offset = id.get() % bits;
+        let word_count = word_index
+            .checked_add(1)
+            .ok_or(MemoryError::InvalidNodeId(id))?;
+        let mut words = Vec::new();
+        words.try_reserve_exact(word_count)?;
+        words.resize(word_count, 0);
+        words[word_index] = (1 as libc::c_ulong) << offset;
+        Ok(Self { words, max_node })
+    }
+}
+
+pub(super) struct MappedRegion {
+    pub(super) adr: *mut u8,
+    length: usize,
+    policy: Option<NumaPolicy>,
+}
+
+impl MappedRegion {
     pub fn try_allocate(length: usize) -> Result<Self, MemoryError> {
         if length == 0 {
             return Err(MemoryError::InvalidSize);
         }
-        // SAFETY: Si l'allocation on return proprement l'erreur
-        // que l'utilisateur doit gérer proprement
+        // SAFETY: Linux chooses the address of a fresh anonymous mapping; no
+        // existing mapping is replaced. No file descriptor or input pointer is
+        // used. MAP_FAILED is checked before storing the owned region.
         let adr = unsafe {
             libc::mmap(
                 std::ptr::null_mut(),
@@ -24,14 +71,67 @@ impl Mapping {
         if adr == libc::MAP_FAILED {
             return Err(MemoryError::Os(std::io::Error::last_os_error()));
         }
-        Ok(Mapping {
+        Ok(MappedRegion {
             adr: adr.cast(),
             length,
+            policy: None,
         })
+    }
+
+    /// Applies a policy after checking membership in the caller's node snapshot.
+    ///
+    /// The caller supplies known memory nodes, not a count or a CPU affinity
+    /// list. This keeps discovery outside the mapping owner. A snapshot is not
+    /// proof that a node is still online or permitted by the current cpuset:
+    /// Linux performs the final validation and may reject the operation.
+    ///
+    /// Call before touching pages to guide their initial allocation. No pages
+    /// are migrated or inspected here. `policy` records only the last policy
+    /// successfully applied through this object and is unchanged on failure.
+    pub(super) fn set_numa_policy(
+        &mut self,
+        policy: NumaPolicy,
+        known_nodes: &[NumaNodeId],
+    ) -> Result<(), MemoryError> {
+        match policy {
+            NumaPolicy::Bind(id) => {
+                let mask = NodeMask::try_new(id, known_nodes)?;
+                // SAFETY: self owns a live, page-aligned mapping. The mask is
+                // initialized, covers max_node - 1 bits (Linux decrements this
+                // argument before reading), and stays alive throughout
+                // the call. Argument widths match the Linux syscall ABI. Zero
+                // flags request neither migration nor a residency check.
+                let result = unsafe {
+                    libc::syscall(
+                        libc::SYS_mbind,
+                        self.adr,
+                        self.length,
+                        libc::MPOL_BIND,
+                        mask.words.as_ptr(),
+                        mask.max_node,
+                        0 as libc::c_uint,
+                    )
+                };
+                if result == -1 {
+                    return Err(MemoryError::Os(std::io::Error::last_os_error()));
+                }
+                self.policy = Some(NumaPolicy::Bind(id));
+            }
+        };
+
+        Ok(())
+    }
+
+    pub(super) fn length(&self) -> usize {
+        self.length
+    }
+
+    pub(super) fn policy(&self) -> Option<NumaPolicy> {
+        self.policy
     }
 }
 
-impl Drop for Mapping {
+impl Drop for MappedRegion {
     fn drop(&mut self) {
         // SAFETY: cette adresse et cette longueur désignent le mapping
         // possédé exclusivement par self, qui n'a pas encore été libéré.
@@ -43,19 +143,84 @@ impl Drop for Mapping {
 mod tests {
     use super::*;
 
-    fn allocate(length: usize) -> Mapping {
-        // MemoryError does not implement Debug yet, so avoid Result::unwrap.
-        match Mapping::try_allocate(length) {
-            Ok(mapping) => mapping,
-            Err(MemoryError::InvalidSize) => panic!("valid length {length} was rejected"),
-            Err(MemoryError::Os(error)) => panic!("mmap failed for {length} bytes: {error}"),
+    fn allocate(length: usize) -> MappedRegion {
+        MappedRegion::try_allocate(length).expect("mapping allocation failed")
+    }
+
+    #[test]
+    fn mask_sets_exactly_one_bit_across_word_boundaries() {
+        let bits = libc::c_ulong::BITS as usize;
+        for value in [0, bits - 1, bits, bits + 1, 2 * bits - 1, 2 * bits] {
+            let id = NumaNodeId::new(value);
+            let mask = NodeMask::try_new(id, &[id]).unwrap();
+            assert_eq!(mask.max_node as usize, value + 2);
+            assert_eq!(mask.words.len(), value / bits + 1);
+            for (index, word) in mask.words.iter().enumerate() {
+                let expected = if index == value / bits {
+                    (1 as libc::c_ulong) << (value % bits)
+                } else {
+                    0
+                };
+                assert_eq!(*word, expected);
+            }
         }
+    }
+
+    #[test]
+    fn sparse_nodes_are_validated_by_membership_not_count() {
+        let known = [NumaNodeId::new(0), NumaNodeId::new(2)];
+        assert!(NodeMask::try_new(known[1], &known).is_ok());
+        assert!(matches!(NodeMask::try_new(NumaNodeId::new(1), &known),
+            Err(MemoryError::UnknownNode(id)) if id.get() == 1));
+    }
+
+    #[test]
+    fn unknown_huge_node_is_rejected_before_mask_allocation() {
+        let id = NumaNodeId::new(usize::MAX - 1);
+        assert!(matches!(NodeMask::try_new(id, &[NumaNodeId::new(0)]),
+            Err(MemoryError::UnknownNode(rejected)) if rejected == id));
+        assert!(matches!(
+            NodeMask::try_new(NumaNodeId::new(0), &[]),
+            Err(MemoryError::UnknownNode(_))
+        ));
+    }
+
+    #[test]
+    fn unrepresentable_max_node_is_rejected_without_allocation() {
+        for value in [usize::MAX - 1, usize::MAX] {
+            let id = NumaNodeId::new(value);
+            assert!(matches!(NodeMask::try_new(id, &[id]),
+                Err(MemoryError::InvalidNodeId(rejected)) if rejected == id));
+        }
+    }
+
+    #[test]
+    fn rejected_node_leaves_policy_unchanged() {
+        let mut mapping = allocate(1);
+        assert_eq!(mapping.policy, None);
+        assert!(matches!(
+            mapping.set_numa_policy(NumaPolicy::Bind(NumaNodeId::new(2)), &[]),
+            Err(MemoryError::UnknownNode(_))
+        ));
+        assert_eq!(mapping.policy, None);
+    }
+
+    #[test]
+    fn reservation_failure_converts_and_preserves_its_source() {
+        fn reserve_too_much() -> Result<(), MemoryError> {
+            let mut words: Vec<libc::c_ulong> = Vec::new();
+            words.try_reserve_exact(usize::MAX)?;
+            Ok(())
+        }
+        let error = reserve_too_much().unwrap_err();
+        assert!(matches!(error, MemoryError::Allocation(_)));
+        assert!(std::error::Error::source(&error).is_some());
     }
 
     #[test]
     fn rejects_zero_length() {
         assert!(matches!(
-            Mapping::try_allocate(0),
+            MappedRegion::try_allocate(0),
             Err(MemoryError::InvalidSize)
         ));
     }

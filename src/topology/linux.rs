@@ -113,7 +113,7 @@ pub(super) fn read_online_cpus(sysfs_root: &std::path::Path) -> Result<Vec<CpuId
 ///
 /// Absence of this file is interpreted by [`discover_from`] as an UMA system;
 /// other I/O errors remain failures and are not hidden by that fallback.
-pub(super) fn read_online_numa_nodes(
+pub(crate) fn read_online_numa_nodes(
     sysfs_root: &std::path::Path,
 ) -> Result<Vec<NumaNodeId>, TopologyError> {
     let path = sysfs_root.join("node/online");
