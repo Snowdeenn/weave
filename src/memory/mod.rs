@@ -24,6 +24,8 @@ pub enum MemoryError {
     Allocation(TryReserveError),
     /// Discovering the known NUMA nodes failed.
     Topology(TopologyError),
+    /// The alignement of the data failed
+    Align,
 }
 
 impl From<TopologyError> for MemoryError {
@@ -42,6 +44,7 @@ impl std::fmt::Display for MemoryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::InvalidSize => write!(f, "invalid memory mapping size"),
+            Self::Align => write!(f, "memory mapping alignment failed"),
             Self::UnknownNode(id) => write!(f, "unknown NUMA node {}", id.get()),
             Self::InvalidNodeId(id) => write!(f, "unrepresentable NUMA node {}", id.get()),
             Self::Os(error) => write!(f, "memory operation failed: {error}"),
