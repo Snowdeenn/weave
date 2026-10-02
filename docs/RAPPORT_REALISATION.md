@@ -3,6 +3,12 @@
 Rapport du 10 septembre 2026. Ce document est prévu pour une lecture autonome
 et pour servir de support à une présentation devant un jury non spécialiste.
 
+Actualisation du 2 octobre 2026 : ce rapport décrit la réalisation initiale.
+Depuis, Weave utilise aussi `libc` pour les appels système et propose sous Linux
+`NumaBuffer<T>`, un buffer NUMA de capacité fixe. Il est `Send` si `T: Send` et
+`Sync` si `T: Sync`. Le transfert entre threads ne migre pas ses pages.
+Le [README](../README.md) décrit son API disponible.
+
 ## 1. Le projet, expliqué simplement
 
 Un ordinateur possède généralement plusieurs unités capables de travailler

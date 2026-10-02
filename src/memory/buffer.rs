@@ -10,9 +10,11 @@ use super::{MemoryError, NumaPolicy};
 /// accepted policy, not an observation or permanent guarantee of page location.
 /// Elements are destroyed before the underlying mapping is released.
 ///
-/// This version rejects zero capacity and zero-sized types, never grows, and
-/// does not implement Send or Sync. Borrowed slices may still be used across
-/// threads when their element type and borrowing rules permit it.
+/// This version rejects zero capacity and zero-sized types and never grows.
+/// The buffer is [`Send`] when `T: Send`, and [`Sync`] when `T: Sync`.
+/// Ownership can therefore move between threads, or shared references can be
+/// used across threads, respectively. Mutating the storage requires an exclusive
+/// borrow. Moving the buffer between threads does not itself migrate its pages.
 ///
 /// # Example
 ///
@@ -171,6 +173,25 @@ impl<T> Drop for NumaBuffer<T> {
         // MappedRegion gère la déallocation de la région
     }
 }
+
+// SAFETY: Le NumaBuffer est owner de la zone mémoire donc le pointeur
+// vers celle-ci est valide jusqu'à la destruction du NumaBuffer. De plus
+// le NumaBuffer est responsable de la destruction des éléments à l'intérieurs de lui
+// et de son mapping donc on peut le passer à d'autre threads si T l'est aussi, vu que `T:Send`
+// autorise le transfère des éléments et aussi leur destruction dans le thread destinataire.
+// Il a aussi la propriété exclusif du mapping, ce qui veut dire que déplacer le buffer
+// effectue juste un transfère de propriété sans déplacer et invalider la mémoire (le pointeur).
+// Et enfin le mapping n'est pas liée au thread créateur, une libération par `munmap` peut ce faire
+// depuis n'importe quel thread.
+unsafe impl<T: Send> Send for NumaBuffer<T> {}
+
+// SAFETY: Un &NumaBuffer<T> expose les éléments initialisés uniquement
+// via des références partagées &T. La borne T: Sync permet de partager
+// ces références entre threads.
+// Les mutations du stockage et de la longueur nécessitent &mut self,
+// ce qui garantit un accès exclusif. Le mapping reste valide pendant
+// les emprunts et aucun état interne n'est modifié via &self.
+unsafe impl<T: Sync> Sync for NumaBuffer<T> {}
 
 #[cfg(test)]
 mod tests {

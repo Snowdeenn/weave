@@ -2,8 +2,8 @@
 
 Une bibliothèque Rust de calcul parallèle : pool de threads, véritable vol de tâches
 entre workers, priorités, tâches empruntant des données, itérateurs parallèles et
-description de la topologie matérielle. Elle utilise uniquement la bibliothèque
-standard.
+description de la topologie matérielle. Elle propose aussi des buffers NUMA sous
+Linux et utilise `libc` pour les appels système.
 
 ## Démarrage
 
@@ -99,6 +99,27 @@ packages et nœuds NUMA. Elle ne choisit pas le nombre de workers, ne fixe pas l
 affinité, ne place pas la mémoire et ne modifie pas encore la politique de vol de
 tâches. Elle constitue la couche de découverte nécessaire à une future
 ordonnance topology-aware.
+
+## Buffers NUMA (Linux)
+
+`weave::memory::buffer::NumaBuffer<T>` possède une allocation de capacité fixe.
+`try_with_capacity` réserve du stockage vide ; `try_push` ajoute un élément ou
+le rend intact si le buffer est plein. `try_new`, disponible pour `T: Default`,
+initialise chaque élément. Les capacités nulles et les types de taille nulle
+ne sont pas acceptés.
+
+`NumaPolicy::Bind(node)` applique la politique au stockage du buffer avant
+l'initialisation. Les erreurs d'allocation ou de configuration sont renvoyées
+via `MemoryError`. La politique ne s'étend pas aux allocations internes des
+éléments, comme les caractères d'un `String`, et ne garantit pas un placement
+physique permanent des pages.
+
+Le buffer est `Send` si `T: Send` et `Sync` si `T: Sync` : on peut respectivement
+transférer sa propriété ou partager des références entre threads.
+`as_slice` expose les éléments initialisés ; `as_mut_slice` exige un emprunt
+exclusif. Ces slices peuvent être utilisées avec les itérateurs parallèles.
+Transférer le buffer entre threads ne migre pas ses pages. Les éléments sont
+détruits avant la libération du mapping, y compris dans un thread destinataire.
 
 ## Stockage par worker
 
