@@ -67,8 +67,8 @@ Les phases donnent un ordre de dépendance, sans date ni pourcentage d'avancemen
 
 ### Contrats et sûreté
 
-- [ ] Vérifier l'inventaire ci-dessus contre une révision précise du dépôt et associer les fonctionnalités à leurs tests.
-- [ ] Documenter les invariants du scheduler : propriété des jobs, publication, exécution au plus une fois et achèvement de chaque tâche acceptée.
+- [x] Vérifier l'inventaire ci-dessus contre une révision précise du dépôt et associer les fonctionnalités à leurs tests.
+- [x] Documenter les invariants du scheduler : propriété des jobs, publication, exécution au plus une fois et achèvement de chaque tâche acceptée.
 - [ ] Auditer les blocs `unsafe`, pointeurs TLS et durées de vie ; éliminer toute référence artificiellement `'static` non justifiée.
 - [ ] Garantir qu'aucune tâche empruntant des données ne survit au retour de son `scope`, y compris pendant un panic ou un échec de soumission.
 - [ ] Vérifier la destruction du pool, des handles et des closures, ainsi que la libération des captures sur tous les chemins.
