@@ -159,6 +159,41 @@ fn searches_stop_upstream_callbacks_on_a_sequential_source() {
 }
 
 #[test]
+fn enumerated_searches_stop_upstream_callbacks() {
+    let pool = ThreadPoolBuilder::new().num_threads(1).build();
+    for in_pool in [false, true] {
+        for any in [false, true] {
+            let check = || {
+                let calls = AtomicUsize::new(0);
+                let source = (0..512)
+                    .parallelize()
+                    .map(|n| {
+                        calls.fetch_add(1, Ordering::Relaxed);
+                        n
+                    })
+                    .enumerate();
+                let result = if any {
+                    source.find_any(|(_, n)| *n == 3)
+                } else {
+                    source.find_first(|(_, n)| *n == 3)
+                };
+                assert_eq!(result, Some((3, 3)));
+                assert_eq!(
+                    calls.load(Ordering::Relaxed),
+                    4,
+                    "enumerate must forward cancellation before exhausting a leaf"
+                );
+            };
+            if in_pool {
+                pool.install(check);
+            } else {
+                check();
+            }
+        }
+    }
+}
+
+#[test]
 fn searches_move_non_sync_values_and_return_borrowed_items() {
     let pool = ThreadPoolBuilder::new().num_threads(4).build();
     pool.install(|| {
