@@ -1,8 +1,7 @@
 # Audit unsafe, durées de vie et phase 0
 
 Référence de départ : f0f81d30b561cfdfe70511788362770904af2ff1.
-Roadmap importée de origin/main à 1382f4a ; les autres changements distants
-(notamment Send/Sync de NumaBuffer) ne sont pas intégrés à ce checkout.
+Au moment de cet audit, seule la roadmap de origin/main à 1382f4a était importée. Les autres changements distants, notamment Send/Sync de NumaBuffer, sont intégrés ensuite et couverts par la [validation de fusion](../merge-2026-10-03/README.md).
 Les sources exactes de la mesure finale sont archivées dans
 [le dossier de référence](../../benchmarks/baseline-2026-10-03/REPORT.md).
 

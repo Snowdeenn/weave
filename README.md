@@ -147,18 +147,24 @@ utilisateur n'est exécuté sous ce verrou. C'est un vrai work-stealing, avec un
 synchronisation centralisée : aucune prétention à égaler les performances de Rayon.
 
 Le seuil de découpage est de 512 éléments. Le vol est mesurable avec
-`pool.steal_count()`. Il n'existe pas encore de benchmark comparatif, de
+`pool.steal_count()`. La suite comparative est conservée dans docs/benchmarks. Il n'existe pas de
 garantie de temps réel, d'annulation générale ni de pool redimensionnable.
 Les pools construits avec un WorkerLayout appliquent une affinité CPU Linux et une politique de vol utilisant la topologie découverte.
-Deux effacements internes de durée de vie restent nécessaires aux tâches
-empruntées ; leurs invariants sont commentés et testés, sans constituer une
+Un helper interne efface la durée de vie des tâches
+empruntées ; ses invariants sont commentés et testés, sans constituer une
 preuve formelle de sûreté mémoire.
 
 Les [invariants du scheduler](docs/SCHEDULER_INVARIANTS.md) précisent la propriété des jobs, leur publication, l'exécution au plus une fois et les conditions d'achèvement des tâches acceptées, avec les tests associés.
 
-## Mémoire NUMA sous Linux
+## Buffers NUMA (Linux)
 
-`weave::memory::buffer::NumaBuffer<T>` réserve une capacité fixe et applique une politique `NumaPolicy::Bind` avant initialisation. `try_push` restitue la valeur si le buffer est plein ; seules les valeurs initialisées sont exposées et détruites. Le type rejette les capacités nulles et les types de taille nulle, et ne fournit pas Send/Sync. La politique acceptée ne prouve pas la résidence physique des pages. La découverte NUMA et le syscall mbind doivent être disponibles ; aucun repli silencieux n'est effectué.
+`weave::memory::buffer::NumaBuffer<T>` possède une allocation de capacité fixe. `try_with_capacity` réserve du stockage vide ; `try_push` ajoute un élément ou le rend intact si le buffer est plein. `try_new`, disponible pour `T: Default`, initialise chaque élément. Les capacités nulles et les types de taille nulle ne sont pas acceptés.
+
+`NumaPolicy::Bind(node)` applique la politique au stockage du buffer avant l'initialisation. Les erreurs d'allocation ou de configuration sont renvoyées via `MemoryError`. La politique ne s'étend pas aux allocations internes des éléments, comme les caractères d'un `String`, et ne garantit pas un placement physique permanent des pages.
+
+Le buffer est `Send` si `T: Send` et `Sync` si `T: Sync` : on peut respectivement transférer sa propriété ou partager des références entre threads. `as_slice` expose les éléments initialisés ; `as_mut_slice` exige un emprunt exclusif. Ces slices peuvent être utilisées avec les itérateurs parallèles. Transférer le buffer entre threads ne migre pas ses pages. Les éléments sont détruits avant la libération du mapping, y compris dans un thread destinataire.
+
+`cargo run --locked --example numa_scope` montre comment découper la slice mutable en morceaux disjoints et les traiter dans `pool.scope`, puis partager le buffer en lecture pour vérifier les résultats. Les tâches empruntent le stockage sans le copier. L'exemple choisit un nœud autorisé pour le thread appelant et nécessite que Linux autorise l'appel `mbind` ; un refus est renvoyé comme une erreur.
 
 ## Vérification
 

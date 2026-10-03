@@ -242,11 +242,12 @@
     },
     {
       "id": "examples",
-      "contract": "Compilation des trois exemples et assertions de tour",
+      "contract": "Compilation des quatre exemples et assertions de tour",
       "sources": [
         "examples/tour.rs",
         "examples/topology.rs",
-        "examples/layout.rs"
+        "examples/layout.rs",
+        "examples/numa_scope.rs"
       ],
       "tests": [],
       "checks": [
@@ -255,7 +256,7 @@
         "cargo run --locked --example topology (Linux)",
         "cargo run --locked --example layout (Linux, CPUs du layout autorisés)"
       ],
-      "platform": "all (compilation/tour), linux (topology/layout)"
+      "platform": "all (compilation/tour), linux (topology/layout/numa_scope)"
     },
     {
       "id": "mesure-initiale",

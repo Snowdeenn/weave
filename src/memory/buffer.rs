@@ -10,9 +10,11 @@ use super::{MemoryError, NumaPolicy};
 /// accepted policy, not an observation or permanent guarantee of page location.
 /// Elements are destroyed before the underlying mapping is released.
 ///
-/// This version rejects zero capacity and zero-sized types, never grows, and
-/// does not implement Send or Sync. Borrowed slices may still be used across
-/// threads when their element type and borrowing rules permit it.
+/// This version rejects zero capacity and zero-sized types and never grows.
+/// The buffer is [`Send`] when `T: Send`, and [`Sync`] when `T: Sync`.
+/// Ownership can therefore move between threads, or shared references can be
+/// used across threads, respectively. Mutating the storage requires an exclusive
+/// borrow. Moving the buffer between threads does not itself migrate its pages.
 ///
 /// # Example
 ///
@@ -29,6 +31,21 @@ use super::{MemoryError, NumaPolicy};
 /// assert_eq!(buffer.as_slice(), &[42]);
 /// # Ok(())
 /// # }
+/// ```
+///
+/// Non-Send elements cannot be transferred through their buffer:
+/// ```compile_fail
+/// use std::rc::Rc;
+/// use weave::memory::buffer::NumaBuffer;
+/// fn assert_send<T: Send>() {}
+/// assert_send::<NumaBuffer<Rc<u8>>>();
+/// ```
+/// Non-Sync elements cannot be shared through their buffer:
+/// ```compile_fail
+/// use std::cell::Cell;
+/// use weave::memory::buffer::NumaBuffer;
+/// fn assert_sync<T: Sync>() {}
+/// assert_sync::<NumaBuffer<Cell<u8>>>();
 /// ```
 pub struct NumaBuffer<T> {
     region: MappedRegion<T>,
@@ -172,9 +189,38 @@ impl<T> Drop for NumaBuffer<T> {
     }
 }
 
+// SAFETY: Le NumaBuffer est owner de la zone mémoire donc le pointeur
+// vers celle-ci est valide jusqu'à la destruction du NumaBuffer. De plus
+// le NumaBuffer est responsable de la destruction des éléments à l'intérieurs de lui
+// et de son mapping donc on peut le passer à d'autre threads si T l'est aussi, vu que `T:Send`
+// autorise le transfère des éléments et aussi leur destruction dans le thread destinataire.
+// Il a aussi la propriété exclusif du mapping, ce qui veut dire que déplacer le buffer
+// effectue juste un transfère de propriété sans déplacer et invalider la mémoire (le pointeur).
+// Et enfin le mapping n'est pas liée au thread créateur, une libération par `munmap` peut ce faire
+// depuis n'importe quel thread.
+unsafe impl<T: Send> Send for NumaBuffer<T> {}
+
+// SAFETY: Un &NumaBuffer<T> expose les éléments initialisés uniquement
+// via des références partagées &T. La borne T: Sync permet de partager
+// ces références entre threads.
+// Les mutations du stockage et de la longueur nécessitent &mut self,
+// ce qui garantit un accès exclusif. Le mapping reste valide pendant
+// les emprunts et aucun état interne n'est modifié via &self.
+unsafe impl<T: Sync> Sync for NumaBuffer<T> {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn send_and_sync_follow_element_bounds() {
+        fn assert_send<T: Send>() {}
+        fn assert_sync<T: Sync>() {}
+        assert_send::<NumaBuffer<u64>>();
+        assert_sync::<NumaBuffer<u64>>();
+        // Cell is Send but not Sync: these are independent requirements.
+        assert_send::<NumaBuffer<std::cell::Cell<u64>>>();
+    }
+
     use crate::topology::NumaNodeId;
 
     // Per-thread state keeps the Default/Drop probes independent under parallel

@@ -1,0 +1,276 @@
+   Compiling libc v0.2.189
+    Checking weave v0.1.0 (/mnt/d/projects/weave)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.77s
+   Compiling libc v0.2.189
+   Compiling weave v0.1.0 (/mnt/d/projects/weave)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.40s
+     Running unittests src/lib.rs (/tmp/weave-phase0-final/debug/deps/weave-e02dcbb268513c9c)
+
+running 84 tests
+test affinity::linux::tests::builds_a_mask_containing_only_the_requested_cpu ... ok
+test affinity::linux::tests::rejects_a_cpu_outside_the_fixed_mask ... ok
+test builder::tests::count_transitions_preserve_names_and_allow_replacement ... ok
+test affinity::linux::tests::pins_a_dedicated_thread_to_one_allowed_cpu ... ok
+test builder::tests::planned_transitions_preserve_names_and_allow_replacement ... ok
+test layout::tests::one_per_logical_cpu_creates_contiguous_worker_indices ... ok
+test layout::tests::one_per_logical_cpu_keeps_smt_siblings_as_distinct_workers ... ok
+test layout::tests::one_per_logical_cpu_preserves_cpu_order_and_hardware_relations ... ok
+test layout::tests::one_per_physical_core_creates_contiguous_worker_indices ... ok
+test layout::tests::one_per_physical_core_distinguishes_equal_core_numbers_across_packages ... ok
+test layout::tests::one_per_physical_core_selects_the_first_cpu_of_each_core ... ok
+test memory::buffer::tests::buffers_are_independent_and_dropping_one_preserves_the_other ... ignored, requires Linux NUMA discovery and an allowed mbind syscall
+test memory::buffer::tests::default_panic_drops_exactly_the_initialized_prefix ... ignored, requires Linux NUMA discovery and an allowed mbind syscall
+test memory::buffer::tests::drop_destroys_only_initialized_elements_and_preserves_rejected_values ... ignored, requires Linux NUMA discovery and an allowed mbind syscall
+test memory::buffer::tests::invalid_new_sizes_do_not_call_default ... ok
+test memory::buffer::tests::new_constructs_each_default_and_drops_every_element_once ... ignored, requires Linux NUMA discovery and an allowed mbind syscall
+test memory::buffer::tests::rejects_a_node_absent_from_the_machine ... ignored, requires Linux NUMA sysfs discovery
+test memory::buffer::tests::rejects_lengths_above_the_slice_limit_before_allocation ... ok
+test memory::buffer::tests::rejects_zero_length_before_discovery ... ok
+test memory::buffer::tests::reserved_buffer_starts_empty_and_returns_rejected_value_when_full ... ignored, requires Linux NUMA discovery and an allowed mbind syscall
+test memory::buffer::tests::send_and_sync_follow_element_bounds ... ok
+test memory::buffer::tests::slices_cover_the_requested_length_across_page_boundaries ... ignored, requires Linux NUMA discovery and an allowed mbind syscall
+test memory::linux::tests::mappings_are_independent_and_dropping_one_preserves_the_other ... ok
+test memory::linux::tests::mask_sets_exactly_one_bit_across_word_boundaries ... ok
+test memory::linux::tests::drop_unmaps_every_page_in_an_isolated_process ... ok
+test memory::linux::tests::non_page_multiple_mapping_preserves_bytes_across_page_boundaries ... ok
+test memory::linux::tests::one_byte_mapping_is_zero_initialized_and_writable ... ok
+test memory::linux::tests::rejected_node_leaves_policy_unchanged ... ok
+test memory::linux::tests::rejects_overflow_and_sizes_above_the_pointer_limit ... ok
+test memory::linux::tests::rejects_zero_length ... ok
+test memory::linux::tests::rejects_zero_sized_types_under_the_current_contract ... ok
+test memory::linux::tests::reservation_failure_converts_and_preserves_its_source ... ok
+test memory::linux::tests::sparse_nodes_are_validated_by_membership_not_count ... ok
+test memory::linux::tests::strongly_aligned_storage_has_room_for_the_last_element ... ok
+test memory::linux::tests::typed_capacity_is_in_elements_and_every_slot_is_writable ... ok
+test memory::linux::tests::unknown_huge_node_is_rejected_before_mask_allocation ... ok
+test memory::linux::tests::unrepresentable_max_node_is_rejected_without_allocation ... ok
+test pool::metrics_tests::diagnostic_counts_include_submission_and_execution ... ok
+test pool::scheduler_tests::circular_plan_wraps_and_records_unknown_topology ... ok
+test pool::scheduler_tests::local_lifo_and_global_fifo_precede_stealing_at_equal_priority ... ok
+test pool::scheduler_tests::priority_precedes_queue_locality_and_victim_proximity ... ok
+test pool::scheduler_tests::takes_sibling_then_local_node_then_remote_and_counts_only_transfers ... ok
+test pool::startup_tests::accepts_all_confirmations_even_after_senders_are_dropped ... ok
+test pool::startup_tests::propagates_affinity_failure_after_an_earlier_success ... ok
+test pool::startup_tests::rejects_disconnection_when_a_confirmation_is_missing ... ok
+test scope::failure_tests::caught_publication_failure_allows_more_scoped_work ... ok
+test scope::failure_tests::panicking_capture_destructor_still_drains_scope ... ok
+test scope::failure_tests::rejected_join_drops_borrowed_branch_without_running_right ... ok
+test scope::failure_tests::rejected_scoped_submission_settles_ticket_and_drains_accepted_borrows ... ok
+test steal::tests::circular_starts_after_each_worker_and_wraps_around ... ok
+test steal::tests::empty_and_single_worker_plans_have_no_victims ... ok
+test steal::tests::topology_aware_lists_every_other_worker_exactly_once ... ok
+test steal::tests::topology_aware_prioritizes_core_then_numa_then_remote_workers ... ok
+test topology::linux::tests::builds_a_sorted_numa_layout_for_online_cpus ... ok
+test topology::linux::tests::discovers_a_complete_topology_from_synthetic_sysfs ... ok
+test topology::linux::tests::discovers_a_synthetic_numa_node_when_node_online_is_absent ... ok
+test topology::linux::tests::does_not_use_the_uma_fallback_for_other_node_online_errors ... ok
+test topology::linux::tests::ignores_offline_cpus_in_numa_memberships ... ok
+test topology::linux::tests::parses_an_inclusive_range ... ok
+test topology::linux::tests::parses_mixed_ids_ranges_and_trailing_newline ... ok
+test topology::linux::tests::parses_non_contiguous_cpu_ids ... ok
+test topology::linux::tests::parses_non_contiguous_numa_node_ids_and_ranges ... ok
+test topology::linux::tests::parses_one_cpu ... ok
+test topology::linux::tests::reads_core_and_package_ids_for_a_cpu ... ok
+test topology::linux::tests::reads_cpus_belonging_to_a_numa_node ... ok
+test topology::linux::tests::reads_cpus_from_a_non_contiguous_numa_node_id ... ok
+test topology::linux::tests::reads_online_cpus_from_a_sysfs_root ... ok
+test topology::linux::tests::reads_online_numa_nodes_from_a_sysfs_root ... ok
+test topology::linux::tests::rejects_an_online_cpu_present_in_multiple_numa_nodes ... ok
+test topology::linux::tests::rejects_an_online_cpu_without_a_numa_node ... ok
+test topology::linux::tests::rejects_descending_ranges ... ok
+test topology::linux::tests::rejects_duplicate_cpu_ids ... ok
+test topology::linux::tests::rejects_empty_input ... ok
+test topology::linux::tests::rejects_empty_list_elements ... ok
+test topology::linux::tests::rejects_non_numeric_cpu_ids ... ok
+test topology::linux::tests::rejects_ranges_with_too_many_bounds ... ok
+test topology::linux::tests::reports_a_missing_core_id_file ... ok
+test topology::linux::tests::reports_a_missing_numa_node_cpulist ... ok
+test topology::linux::tests::reports_a_missing_online_numa_nodes_file ... ok
+test topology::linux::tests::reports_a_non_numeric_core_id ... ok
+test topology::linux::tests::reports_an_invalid_numa_node_cpulist ... ok
+test topology::linux::tests::returns_cpu_ids_in_ascending_order ... ok
+test topology::linux::tests::same_core_number_in_different_packages_identifies_different_cores ... ok
+test topology::tests::counts_distinguish_smt_cores_and_packages ... ok
+
+test result: ok. 77 passed; 0 failed; 7 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/affinity.rs (/tmp/weave-phase0-final/debug/deps/affinity-0479718b216bb115)
+
+running 2 tests
+test building_a_layout_pool_does_not_change_the_callers_affinity ... ok
+test workers_run_on_the_cpus_selected_by_the_layout ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/build_errors.rs (/tmp/weave-phase0-final/debug/deps/build_errors-abef61a50796942e)
+
+running 3 tests
+test affinity_errors_without_a_cause_describe_the_failure ... ok
+test build_error_preserves_an_affinity_failure_without_an_os_cause ... ok
+test build_error_preserves_worker_context_and_the_full_cause_chain ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/iterator_terminals.rs (/tmp/weave-phase0-final/debug/deps/iterator_terminals-492d9718dfa35c9e)
+
+running 12 tests
+test enumerated_searches_stop_upstream_callbacks ... ok
+test count_evaluates_and_drops_owned_items ... ok
+test find_first_keeps_searching_left_when_right_finishes_first ... ok
+test searches_cancel_remaining_work_inside_a_pool ... ok
+test extrema_preserve_tie_semantics_without_clone ... ok
+test searches_stop_upstream_callbacks_on_a_sequential_source ... ok
+test extend_appends_owned_values_in_order_and_preserves_empty_destination ... ok
+test searches_move_non_sync_values_and_return_borrowed_items ... ok
+test sum_supports_a_distinct_non_clone_accumulator ... ok
+test terminal_panics_propagate_and_pool_recovers ... ok
+test aggregates_match_sequential_at_split_boundaries ... ok
+test searches_handle_filtered_order_empty_and_missing_matches ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/iterators.rs (/tmp/weave-phase0-final/debug/deps/iterators-1bee5f47309a9bf8)
+
+running 15 tests
+test empty_reversed_and_large_offset_ranges ... ok
+test fill_rejects_mismatch_before_running_mapper ... ok
+test filter_can_reject_every_element ... ok
+test filter_handles_empty_source ... ok
+test filter_can_accept_every_element ... ok
+test filter_supports_a_predicate_capturing_a_non_copy_value ... ok
+test iterator_panics_propagate_and_pool_remains_usable ... ok
+test map_is_lazy_and_supports_non_clone_items ... ok
+test filter_map ... ok
+test slices_borrow_mutably_and_preserve_order ... ok
+test fold_clones_only_at_splits_and_ordered_collection_is_stable ... ok
+test parallel_filter_same_as_sequential ... ok
+test enumerate_matches_the_sequential_iterator ... ok
+test chunks_keep_the_tail_and_split_in_chunk_units ... ok
+test operations_match_sequential_results_at_split_boundaries ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/miri_core.rs (/tmp/weave-phase0-final/debug/deps/miri_core-58867cce1c110a6f)
+
+running 4 tests
+test abandoned_handle_and_panic_release_owned_captures ... ok
+test scoped_borrows_descendants_panics_and_detached_handle ... ok
+test parallel_mutable_slices_and_ordered_search ... ok
+test nested_cross_pool_and_worker_local_borrows ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/pool.rs (/tmp/weave-phase0-final/debug/deps/pool-059b26c5639ad6e7)
+
+running 17 tests
+test every_worker_has_a_distinct_local_slot ... ok
+test handles_report_results_panics_and_detach ... ok
+test cross_pool_install_preserves_original_worker_context ... ok
+test nested_submit_join_and_install_work_on_one_worker ... ok
+test builder_options_are_independent_and_zero_is_rejected ... ok
+test pool_can_be_dropped_by_its_last_worker_owner ... ok
+test priorities_select_queued_work_without_preemption ... ok
+test scope_borrows_returns_values_and_waits_for_descendants ... ok
+test scope_catches_panicking_result_destructors_without_hanging ... ok
+test scoped_submission_panics_are_observed_or_propagated ... ok
+test worker_local_is_pool_bound_and_detects_recursive_access ... ok
+test worker_local_reports_poison_and_recovers_owned_values ... ok
+test workers_really_steal_locally_spawned_jobs ... ok
+test concurrent_producers_execute_every_job_exactly_once ... ok
+test join_waits_for_borrowed_branch_when_other_panics ... ok
+test scope_waits_on_body_panic_and_propagates_task_panic ... ok
+test idle_workers_wake_and_drop_drains_all_jobs ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running tests/safety_stress.rs (/tmp/weave-phase0-final/debug/deps/safety_stress-f1063508457bf4ba)
+
+running 8 tests
+test floating_reduction_can_differ_from_sequential_grouping ... ok
+test closures_and_results_drop_once_on_success_panic_and_detach ... ok
+test sustained_high_priority_starves_lower_queues_until_stream_stops ... ok
+test panicking_scope_drains_descendants_and_releases_captures ... ok
+test ordered_results_and_search_do_not_promise_callback_order ... ok
+test worker_owned_shutdown_drains_children_and_releases_captures ... ok
+test external_producers_nest_across_single_worker_pools ... ok
+test seeded_external_wake_idle_and_shutdown_stress ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+
+     Running unittests examples/layout.rs (/tmp/weave-phase0-final/debug/examples/layout-1e4d8afe0fb1dbde)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/numa_scope.rs (/tmp/weave-phase0-final/debug/examples/numa_scope-1b82d38c5d0baa55)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/topology.rs (/tmp/weave-phase0-final/debug/examples/topology-1b4354c310311c37)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/tour.rs (/tmp/weave-phase0-final/debug/examples/tour-4e2a4707ea31f092)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling weave v0.1.0 (/mnt/d/projects/weave)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.62s
+   Doc-tests weave
+
+running 2 tests
+test src/lib.rs - topology (line 40) - compile ... ok
+test src/memory/buffer.rs - memory::buffer::NumaBuffer (line 21) - compile ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 8 tests
+test src/scope.rs - scope::Scope (line 63) - compile fail ... ok
+test src/scope.rs - scope::Scope (line 54) - compile fail ... ok
+test src/memory/buffer.rs - memory::buffer::NumaBuffer (line 44) - compile fail ... ok
+test src/memory/buffer.rs - memory::buffer::NumaBuffer (line 37) - compile fail ... ok
+test src/scope.rs - scope::Scope (line 73) - compile fail ... ok
+test src/builder.rs - builder::ThreadPoolBuilder (line 21) - compile fail ... ok
+test src/builder.rs - builder::ThreadPoolBuilder (line 33) - compile fail ... ok
+test src/builder.rs - builder::ThreadPoolBuilder (line 27) - compile fail ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+all doctests ran in 0.33s; merged doctests compilation took 0.25s
+ Documenting weave v0.1.0 (/mnt/d/projects/weave)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.68s
+   Generated /tmp/weave-phase0-final/doc/weave/index.html
+   Compiling libc v0.2.189
+   Compiling weave v0.1.0 (/mnt/d/projects/weave)
+    Finished `release` profile [optimized] target(s) in 2.03s
+     Running tests/safety_stress.rs (/tmp/weave-phase0-final/release/deps/safety_stress-04b1926d3487e91e)
+
+running 8 tests
+test sustained_high_priority_starves_lower_queues_until_stream_stops ... ok
+test worker_owned_shutdown_drains_children_and_releases_captures ... ok
+test floating_reduction_can_differ_from_sequential_grouping ... ok
+test ordered_results_and_search_do_not_promise_callback_order ... ok
+test closures_and_results_drop_once_on_success_panic_and_detach ... ok
+test panicking_scope_drains_descendants_and_releases_captures ... ok
+test external_producers_nest_across_single_worker_pools ... ok
+test seeded_external_wake_idle_and_shutdown_stress ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.74s
+
+   Compiling crossbeam-utils v0.8.21
+   Compiling rayon-core v1.13.0
+    Checking either v1.16.0
+    Checking weave v0.1.0 (/mnt/d/projects/weave)
+    Checking crossbeam-epoch v0.9.18
+    Checking crossbeam-deque v0.8.6
+    Checking rayon v1.12.0
+    Checking weave-baseline v0.1.0 (/mnt/d/projects/weave/benchmarks)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.50s
