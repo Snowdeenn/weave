@@ -15,9 +15,31 @@ impl Priority {
         self as usize
     }
 }
+
+#[derive(Default)]
+struct Completion {
+    cleanup: Option<Box<dyn Send>>,
+    finished: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
+}
+impl Drop for Completion {
+    fn drop(&mut self) {
+        // This runs OUTSIDE the erased FnOnce call frame, including on unwind.
+        // Its argument's borrow protectors must end before a scope can return
+        // or a handle can hand borrowed results back to the caller.
+        drop(self.cleanup.take());
+        if let Some(finished) = &self.finished {
+            finished.store(true, std::sync::atomic::Ordering::Release);
+        }
+    }
+}
+
 /// An owned detached task with scheduling metadata.
+/// Its closure moves into a queue and then into exactly one executor.
+/// Running consumes the job; the scheduler neither clones nor retries it.
 pub struct Job {
+    // Field order also applies to rejection: captures drop before completion.
     task: Box<dyn FnOnce() + Send + 'static>,
+    completion: Completion,
     priority: Priority,
     label: Option<&'static str>,
 }
@@ -26,16 +48,47 @@ impl Job {
     pub fn new(f: impl FnOnce() + Send + 'static) -> Self {
         Self {
             task: Box::new(f),
+            completion: Completion::default(),
             priority: Priority::Normal,
             label: None,
         }
     }
-    pub(crate) fn from_raw(task: Box<dyn FnOnce() + Send + 'static>, priority: Priority) -> Self {
+    /// Erases a borrowed task's lifetime solely for storage in scheduler queues.
+    ///
+    /// # Safety
+    /// The caller must wait until the entire erased FnOnce invocation has
+    /// returned/unwound and its captures have been destroyed before their
+    /// lifetime ends. Signalling inside that closure is insufficient.
+    /// Enqueue must either accept without further unwind or drop on rejection.
+    /// Leaking a result handle must not bypass the wait.
+    pub(crate) unsafe fn from_borrowed<'a>(
+        task: Box<dyn FnOnce() + Send + 'a>,
+        priority: Priority,
+    ) -> Self {
+        // SAFETY: caller arranges structured completion outside the call frame;
+        // only trait-object storage lifetime is erased, not a reference.
+        let task = unsafe {
+            std::mem::transmute::<Box<dyn FnOnce() + Send + 'a>, Box<dyn FnOnce() + Send + 'static>>(
+                task,
+            )
+        };
         Self {
             task,
+            completion: Completion::default(),
             priority,
             label: None,
         }
+    }
+    pub(crate) fn with_cleanup(mut self, cleanup: impl Send + 'static) -> Self {
+        self.completion.cleanup = Some(Box::new(cleanup));
+        self
+    }
+    pub(crate) fn with_finish_signal(
+        mut self,
+        finished: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    ) -> Self {
+        self.completion.finished = Some(finished);
+        self
     }
     /// Set priority.
     pub fn set_priority(mut self, priority: Priority) -> Self {
@@ -49,7 +102,12 @@ impl Job {
     }
     /// Execute immediately on the calling thread.
     pub fn run(self) {
-        (self.task)()
+        let Self {
+            task, completion, ..
+        } = self;
+        task();
+        // On panic the same cleanup runs while unwinding this outer frame.
+        drop(completion);
     }
     /// Read priority.
     pub fn priority(&self) -> Priority {

@@ -4,10 +4,10 @@ use std::collections::TryReserveError;
 
 use crate::topology::{NumaNodeId, TopologyError};
 
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", not(miri)))]
 pub mod linux;
 
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", not(miri)))]
 pub mod buffer;
 /// Failure to allocate memory or configure its NUMA policy.
 #[derive(Debug)]

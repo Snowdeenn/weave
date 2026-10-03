@@ -1,6 +1,6 @@
 use crate::topology::CpuId;
 
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", not(miri)))]
 mod linux;
 
 /// Failure to bind a worker thread to a logical CPU.
@@ -46,10 +46,10 @@ impl std::error::Error for AffinityError {
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", not(miri)))]
 pub(crate) use linux::pin_current_thread;
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(any(not(target_os = "linux"), miri))]
 pub(crate) fn pin_current_thread(_cpu: CpuId) -> Result<(), AffinityError> {
     Err(AffinityError::UnsupportedPlatform)
 }

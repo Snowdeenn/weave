@@ -1,3 +1,5 @@
+//! Linux mapping ownership and NUMA policy implementation.
+
 use super::{MemoryError, NumaPolicy};
 use crate::topology::NumaNodeId;
 
@@ -149,10 +151,6 @@ impl<T> MappedRegion<T> {
         };
 
         Ok(())
-    }
-
-    pub(super) fn length(&self) -> usize {
-        self.mapped_len
     }
 
     pub(super) fn data_ptr(&self) -> *mut T {

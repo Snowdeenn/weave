@@ -713,6 +713,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "Miri cannot open a directory as a file")]
     fn does_not_use_the_uma_fallback_for_other_node_online_errors() {
         let sysfs = FakeSysfs::new();
         fs::write(sysfs.root().join("cpu/online"), "0\n").unwrap();

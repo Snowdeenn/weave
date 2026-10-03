@@ -6,8 +6,10 @@ fn cpu_set_for(cpu: CpuId) -> Result<libc::cpu_set_t, AffinityError> {
         return Err(AffinityError::CpuOutOfRange(cpu));
     }
 
+    // SAFETY: cpu_set_t is an integer bitset and accepts the all-zero pattern.
     let mut cpu_set: libc::cpu_set_t = unsafe { std::mem::zeroed() };
 
+    // SAFETY: the mask is valid and cpu was checked against CPU_SETSIZE.
     unsafe {
         libc::CPU_ZERO(&mut cpu_set);
         libc::CPU_SET(cpu.get(), &mut cpu_set);
@@ -19,6 +21,8 @@ fn cpu_set_for(cpu: CpuId) -> Result<libc::cpu_set_t, AffinityError> {
 pub(crate) fn pin_current_thread(cpu: CpuId) -> Result<(), AffinityError> {
     let cpu_set = cpu_set_for(cpu)?;
 
+    // SAFETY: cpu_set is initialized, lives for the syscall and has ABI size;
+    // pid 0 selects only the calling thread. The OS validates permissions.
     unsafe {
         let result_code =
             libc::sched_setaffinity(0, std::mem::size_of::<libc::cpu_set_t>(), &cpu_set);
@@ -76,6 +80,7 @@ mod tests {
     }
 
     fn current_affinity() -> Result<libc::cpu_set_t, std::io::Error> {
+        // SAFETY: cpu_set_t is an integer bitset and accepts the all-zero pattern.
         let mut cpu_set: libc::cpu_set_t = unsafe { std::mem::zeroed() };
         let result = unsafe {
             libc::sched_getaffinity(0, std::mem::size_of::<libc::cpu_set_t>(), &mut cpu_set)

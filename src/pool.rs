@@ -1,3 +1,22 @@
+//! Scheduler invariants (see docs/SCHEDULER_INVARIANTS.md for details and tests).
+//!
+//! A successfully enqueued Job has exactly one owner: one queue or one executor.
+//! Queue access and shutdown/pending transitions use the same scheduler mutex;
+//! mutex release/acquisition publishes captures, while the condvar only wakes.
+//! At transition boundaries, pending counts queued jobs plus popped jobs whose
+//! execute call has not yet accounted for completion. Taking a job does not
+//! decrement it. Both worker loops and cooperative helpers consume jobs once,
+//! outside the lock, then account for return or recoverable unwind exactly once.
+//!
+//! Shutdown drains rather than cancels. Running parents remain counted while
+//! publishing descendants. Exit requires shutdown and pending == 0 under the
+//! lock. Internal callers must not enqueue after all workers have exited.
+//! Eventual completion assumes terminating callbacks/destructors, worker
+//! progress, no indefinite starvation, usable locks and nonoverflowing counts.
+//! Strict priorities do not guarantee fairness; blocking user code and process
+//! aborts are outside this guarantee. Result readiness precedes final scheduler
+//! accounting and must not be used as a substitute for pending == 0.
+
 use crate::{
     BuildError, IntoJob, Job, JoinHandle, Priority, ThreadPoolBuilder, WorkerLayout,
     affinity::pin_current_thread, handle::JobState, steal::StealPlan,
@@ -12,12 +31,37 @@ type Queues = [VecDeque<Job>; 3];
 struct Scheduler {
     global: Queues,
     local: Vec<Queues>,
+    // Queued + popped but not yet accounted for, including suspended parents.
     pending: usize,
     shutdown: bool,
     steals: crate::StealStats,
     steal_plan: StealPlan,
 }
+
+/// Diagnostic scheduler-lock counters. Available only with scheduler-metrics.
+/// This instrumentation changes lock acquisition and adds clocks/atomics.
+/// Snapshots are approximate across concurrent updates, not timing baselines.
+#[cfg(feature = "scheduler-metrics")]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct SchedulerMetrics {
+    /// Attempts to acquire the central scheduler mutex.
+    pub lock_attempts: u64,
+    /// Attempts whose initial try_lock found another owner.
+    pub contended: u64,
+    /// Sum of elapsed nanoseconds waiting after such a failed try_lock.
+    pub wait_ns: u64,
+}
+#[cfg(feature = "scheduler-metrics")]
+#[derive(Default)]
+struct LockMetrics {
+    attempts: std::sync::atomic::AtomicU64,
+    contended: std::sync::atomic::AtomicU64,
+    wait_ns: std::sync::atomic::AtomicU64,
+}
+
 pub(crate) struct SharedPoolData {
+    #[cfg(feature = "scheduler-metrics")]
+    metrics: LockMetrics,
     scheduler: Mutex<Scheduler>,
     wake: Condvar,
 }
@@ -27,6 +71,15 @@ pub(crate) struct WorkerContext {
     pub shared: Arc<SharedPoolData>,
     pub index: usize,
 }
+#[cfg(test)]
+thread_local! {
+    static REJECT_NEXT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+#[cfg(test)]
+pub(crate) fn reject_next_submission() {
+    REJECT_NEXT.with(|reject| reject.set(true));
+}
+
 thread_local! {
     static CURRENT_WORKER: RefCell<Option<WorkerContext>> = const { RefCell::new(None) };
 }
@@ -37,6 +90,8 @@ pub(crate) fn help_current_worker() -> bool {
     current_worker().is_some_and(|ctx| ctx.shared.help(ctx.index))
 }
 impl Scheduler {
+    // Caller holds the scheduler mutex. A pop transfers the sole Job owner;
+    // pending is unchanged until execute accounts for completion.
     fn take(&mut self, index: usize) -> Option<Job> {
         for priority in (0..3).rev() {
             if let Some(job) = self.local[index][priority].pop_back() {
@@ -57,17 +112,58 @@ impl Scheduler {
     }
 }
 impl SharedPoolData {
+    fn lock_scheduler(&self) -> std::sync::MutexGuard<'_, Scheduler> {
+        #[cfg(not(feature = "scheduler-metrics"))]
+        {
+            self.scheduler.lock().unwrap()
+        }
+        #[cfg(feature = "scheduler-metrics")]
+        {
+            use std::sync::{TryLockError, atomic::Ordering};
+            self.metrics.attempts.fetch_add(1, Ordering::Relaxed);
+            match self.scheduler.try_lock() {
+                Ok(guard) => guard,
+                Err(TryLockError::Poisoned(error)) => panic!("scheduler poisoned: {error}"),
+                Err(TryLockError::WouldBlock) => {
+                    let start = std::time::Instant::now();
+                    let guard = self.scheduler.lock().unwrap();
+                    self.metrics.contended.fetch_add(1, Ordering::Relaxed);
+                    self.metrics.wait_ns.fetch_add(
+                        start.elapsed().as_nanos().min(u64::MAX as u128) as u64,
+                        Ordering::Relaxed,
+                    );
+                    guard
+                }
+            }
+        }
+    }
     pub(crate) fn enqueue(self: &Arc<Self>, job: Job) {
+        #[cfg(test)]
+        REJECT_NEXT.with(|reject| {
+            assert!(!reject.replace(false), "injected publication failure");
+        });
         let local_worker = current_worker()
             .filter(|ctx| Arc::ptr_eq(&ctx.shared, self))
             .map(|ctx| ctx.index);
-        let mut scheduler = self.scheduler.lock().unwrap();
+        let mut scheduler = self.lock_scheduler();
         let priority = job.priority().index();
-        match local_worker {
-            Some(i) => scheduler.local[i][priority].push_back(job),
-            None => scheduler.global[priority].push_back(job),
+        let Some(next_pending) = scheduler.pending.checked_add(1) else {
+            drop(scheduler);
+            panic!("scheduler task count overflow");
+        };
+        let queue = match local_worker {
+            Some(i) => &mut scheduler.local[i][priority],
+            None => &mut scheduler.global[priority],
+        };
+        if let Err(error) = queue.try_reserve(1) {
+            // Never unwind while holding the scheduler lock or after acceptance.
+            // The caller still owns job; dropping it releases borrowed captures.
+            drop(scheduler);
+            panic!("cannot reserve scheduler queue: {error}");
         }
-        scheduler.pending += 1;
+        queue.push_back(job);
+        // After publication, no fallible operation may precede return.
+        scheduler.pending = next_pending;
         self.wake.notify_one();
     }
     fn execute(&self, job: Job) {
@@ -75,12 +171,14 @@ impl SharedPoolData {
         if let Err(payload) = catch_unwind(AssertUnwindSafe(|| job.run())) {
             discard(payload);
         }
-        let mut scheduler = self.scheduler.lock().unwrap();
+        let mut scheduler = self.lock_scheduler();
+        // The consumed job cannot be retried. Account only after run/unwind
+        // and panic-payload cleanup, including for cooperative executions.
         scheduler.pending -= 1;
         self.wake.notify_all();
     }
     fn help(&self, index: usize) -> bool {
-        let job = self.scheduler.lock().unwrap().take(index);
+        let job = self.lock_scheduler().take(index);
         if let Some(job) = job {
             self.execute(job);
             true
@@ -88,8 +186,9 @@ impl SharedPoolData {
             false
         }
     }
+    // Request draining; accepted parents may still enqueue descendants.
     fn stop(&self) {
-        self.scheduler.lock().unwrap().shutdown = true;
+        self.lock_scheduler().shutdown = true;
         self.wake.notify_all();
     }
 }
@@ -184,6 +283,8 @@ impl ThreadPool {
             return Err(BuildError::InvalidThreadName);
         }
         let shared = Arc::new(SharedPoolData {
+            #[cfg(feature = "scheduler-metrics")]
+            metrics: LockMetrics::default(),
             scheduler: Mutex::new(Scheduler {
                 global: Default::default(),
                 local: (0..num_threads).map(|_| Queues::default()).collect(),
@@ -204,13 +305,24 @@ impl ThreadPool {
     pub fn num_threads(&self) -> usize {
         self.num_threads
     }
+    /// Returns optional instrumentation counters; use only in diagnostic runs.
+    #[cfg(feature = "scheduler-metrics")]
+    pub fn scheduler_metrics(&self) -> SchedulerMetrics {
+        use std::sync::atomic::Ordering;
+        SchedulerMetrics {
+            lock_attempts: self.shared.metrics.attempts.load(Ordering::Relaxed),
+            contended: self.shared.metrics.contended.load(Ordering::Relaxed),
+            wait_ns: self.shared.metrics.wait_ns.load(Ordering::Relaxed),
+        }
+    }
+
     /// Count of actual transfers from another worker's local deque.
     pub fn steal_count(&self) -> usize {
         self.steal_stats().total()
     }
     /// Returns a consistent snapshot of successful steals by placement proximity.
     pub fn steal_stats(&self) -> crate::StealStats {
-        self.shared.scheduler.lock().unwrap().steals
+        self.shared.lock_scheduler().steals
     }
     /// Schedule detached work. The panic hook reports failures; workers survive.
     pub fn spawn(&self, job: impl IntoJob) {
@@ -238,9 +350,11 @@ impl ThreadPool {
         f: impl FnOnce() -> T + Send + 'static,
     ) -> JoinHandle<T> {
         let (state, handle) = JobState::channel();
-        self.spawn_with_priority(priority, move || {
-            state.complete(catch_unwind(AssertUnwindSafe(f)))
-        });
+        let finished = state.finished.clone();
+        let job = Job::new(move || state.complete(catch_unwind(AssertUnwindSafe(f))))
+            .set_priority(priority)
+            .with_finish_signal(finished);
+        self.spawn(job);
         handle
     }
     /// Run two branches and wait for both, including on panic.
@@ -276,16 +390,15 @@ pub(crate) fn join_on<A: Send, B>(
     right: impl FnOnce() -> B,
 ) -> (A, B) {
     let (state, handle) = JobState::channel();
+    let finished = state.finished.clone();
     let task: Box<dyn FnOnce() + Send + '_> =
         Box::new(move || state.complete(catch_unwind(AssertUnwindSafe(left))));
-    // SAFETY: both branches are caught and the handle is always joined before
-    // returning or resuming a panic. All captured borrows have finished use.
-    let task = unsafe {
-        std::mem::transmute::<Box<dyn FnOnce() + Send + '_>, Box<dyn FnOnce() + Send + 'static>>(
-            task,
-        )
-    };
-    shared.enqueue(Job::from_raw(task, Priority::Normal));
+    // SAFETY: enqueue rejects before publication and drops the borrowed task
+    // on failure. Once accepted it cannot unwind; both branches are caught and
+    // the handle waits for completion outside the erased FnOnce call frame
+    // before returning/resuming panic, not merely for result publication.
+    let job = unsafe { Job::from_borrowed(task, Priority::Normal) }.with_finish_signal(finished);
+    shared.enqueue(job);
     let right = catch_unwind(AssertUnwindSafe(right));
     let left = handle.join();
     match (left, right) {
@@ -314,14 +427,18 @@ fn worker_loop(shared: Arc<SharedPoolData>, index: usize) {
     });
     loop {
         let job = {
-            let mut scheduler = shared.scheduler.lock().unwrap();
+            let mut scheduler = shared.lock_scheduler();
             loop {
                 if let Some(job) = scheduler.take(index) {
                     break Some(job);
                 }
+                // Empty queues alone are insufficient: popped parents may
+                // still run and publish children. Check accounting under lock.
                 if scheduler.shutdown && scheduler.pending == 0 {
                     break None;
                 }
+                // Atomically unlock and wait, then recheck both predicates;
+                // enqueue/stop/execute change them under this same mutex.
                 scheduler = shared.wake.wait(scheduler).unwrap();
             }
         };
@@ -518,5 +635,20 @@ mod startup_tests {
         assert!(matches!(error, BuildError::StartupDisconnected(_)));
         assert!(std::error::Error::source(&error).is_some());
         assert!(error.to_string().contains("before all confirmations"));
+    }
+}
+
+#[cfg(all(test, feature = "scheduler-metrics"))]
+mod metrics_tests {
+    use crate::ThreadPoolBuilder;
+    #[test]
+    fn diagnostic_counts_include_submission_and_execution() {
+        let pool = ThreadPoolBuilder::new().num_threads(1).build();
+        let before = pool.scheduler_metrics();
+        assert_eq!(pool.submit(|| 42).join().unwrap(), 42);
+        let after = pool.scheduler_metrics();
+        assert!(after.lock_attempts >= before.lock_attempts + 2);
+        assert!(after.contended <= after.lock_attempts);
+        assert!(after.wait_ns >= before.wait_ns);
     }
 }
