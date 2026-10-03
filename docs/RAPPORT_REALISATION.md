@@ -1,3 +1,5 @@
+> Document historique : les API, dépendances et nombres de tests ci-dessous décrivent une livraison antérieure. Pour le socle actuel, consulter [la vérification référencée](verification/README.md).
+
 # Weave — rapport de réalisation
 
 Rapport du 10 septembre 2026. Ce document est prévu pour une lecture autonome

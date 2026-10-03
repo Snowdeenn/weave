@@ -1,0 +1,19 @@
+[package]
+name = "weave-baseline"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+weave = { path = ".." }
+rayon = "=1.12.0"
+
+[features]
+allocation-metrics = []
+scheduler-metrics = ["weave/scheduler-metrics"]
+
+[profile.release]
+opt-level = 3
+lto = false
+codegen-units = 16
+debug = false

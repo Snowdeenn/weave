@@ -1,0 +1,69 @@
+rustc 1.101.0-nightly (c36f14571 2026-10-01)
+binary: rustc
+commit-hash: c36f1457196e315bc204b9564a6a5a7fe7f5a51f
+commit-date: 2026-10-01
+host: x86_64-unknown-linux-gnu
+release: 1.101.0-nightly
+LLVM version: 23.1.1
+   Compiling libc v0.2.189
+   Compiling weave v0.1.0 (/mnt/d/projects/weave)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.38s
+     Running unittests src/lib.rs (/tmp/weave-miri-phase0/miri/x86_64-unknown-linux-gnu/debug/build/weave/931acf6f0330ad1c/out/weave-931acf6f0330ad1c)
+
+running 54 tests
+test builder::tests::count_transitions_preserve_names_and_allow_replacement ... ok
+test builder::tests::planned_transitions_preserve_names_and_allow_replacement ... ok
+test layout::tests::one_per_logical_cpu_creates_contiguous_worker_indices ... ok
+test layout::tests::one_per_logical_cpu_keeps_smt_siblings_as_distinct_workers ... ok
+test layout::tests::one_per_logical_cpu_preserves_cpu_order_and_hardware_relations ... ok
+test layout::tests::one_per_physical_core_creates_contiguous_worker_indices ... ok
+test layout::tests::one_per_physical_core_distinguishes_equal_core_numbers_across_packages ... ok
+test layout::tests::one_per_physical_core_selects_the_first_cpu_of_each_core ... ok
+test pool::scheduler_tests::circular_plan_wraps_and_records_unknown_topology ... ok
+test pool::scheduler_tests::local_lifo_and_global_fifo_precede_stealing_at_equal_priority ... ok
+test pool::scheduler_tests::priority_precedes_queue_locality_and_victim_proximity ... ok
+test pool::scheduler_tests::takes_sibling_then_local_node_then_remote_and_counts_only_transfers ... ok
+test pool::startup_tests::accepts_all_confirmations_even_after_senders_are_dropped ... ok
+test pool::startup_tests::propagates_affinity_failure_after_an_earlier_success ... ok
+test pool::startup_tests::rejects_disconnection_when_a_confirmation_is_missing ... ok
+test scope::failure_tests::caught_publication_failure_allows_more_scoped_work ... error: Undefined Behavior: not granting access to tag <554377> because that would remove [Unique for <565499>] which is strongly protected
+   --> src/scope.rs:287:9
+    |
+287 | ...   asser...d, 5);
+    |       ^^^^^...^^^^^ Undefined Behavior occurred here
+    |
+    = help: this indicates a potential bug in the program: it performed an invalid operation, but the Stacked Borrows rules it violated are still experimental
+    = help: see https://github.com/rust-lang/unsafe-code-guidelines/blob/master/wip/stacked-borrows.md for further information
+help: <554377> was created here, as the root tag for alloc177800
+   --> src/scope.rs:276:20
+    |
+276 |           pool.scope(|s| {
+    |  ____________________^
+277 | |             let capture...
+278 | |             reject_next...
+279 | |             assert!(
+...   |
+285 | |             s.spawn(|| ...
+286 | |         });
+    | |_________^
+help: <565499> is this argument
+   --> src/scope.rs:175:64
+    |
+175 | ...ew(move ...run());
+    |       ^^^^^...^^^^^
+    = note: this is on thread `scope::failure_`
+    = note: stack backtrace:
+            0: scope::failure_tests::caught_publication_failure_allows_more_scoped_work
+                at /home/Snow/.rustup/toolchains/nightly-2026-10-02-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/macros/mod.rs:45:16: 45:22
+            1: scope::failure_tests::caught_publication_failure_allows_more_scoped_work::{closure#0}
+                at src/scope.rs:272:60: 272:60
+
+note: some details are omitted, run with `MIRIFLAGS=-Zmiri-backtrace=full` for a verbose backtrace
+
+error: aborting due to 1 previous error
+
+error: test failed, to rerun pass `--lib`
+
+Caused by:
+  process didn't exit successfully: `/home/Snow/.rustup/toolchains/nightly-2026-10-02-x86_64-unknown-linux-gnu/bin/cargo-miri runner /tmp/weave-miri-phase0/miri/x86_64-unknown-linux-gnu/debug/build/weave/931acf6f0330ad1c/out/weave-931acf6f0330ad1c` (exit status: 1)
+note: test exited abnormally; to see the full output pass --no-capture to the harness.

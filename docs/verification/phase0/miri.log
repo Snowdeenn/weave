@@ -1,0 +1,151 @@
+rustc 1.101.0-nightly (c36f14571 2026-10-01)
+binary: rustc
+commit-hash: c36f1457196e315bc204b9564a6a5a7fe7f5a51f
+commit-date: 2026-10-01
+host: x86_64-unknown-linux-gnu
+release: 1.101.0-nightly
+LLVM version: 23.1.1
+   Compiling libc v0.2.189
+   Compiling weave v0.1.0 (/mnt/d/projects/weave)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.87s
+     Running unittests src/lib.rs (/tmp/weave-miri-phase0/miri/x86_64-unknown-linux-gnu/debug/build/weave/931acf6f0330ad1c/out/weave-931acf6f0330ad1c)
+
+running 54 tests
+test builder::tests::count_transitions_preserve_names_and_allow_replacement ... ok
+test builder::tests::planned_transitions_preserve_names_and_allow_replacement ... ok
+test layout::tests::one_per_logical_cpu_creates_contiguous_worker_indices ... ok
+test layout::tests::one_per_logical_cpu_keeps_smt_siblings_as_distinct_workers ... ok
+test layout::tests::one_per_logical_cpu_preserves_cpu_order_and_hardware_relations ... ok
+test layout::tests::one_per_physical_core_creates_contiguous_worker_indices ... ok
+test layout::tests::one_per_physical_core_distinguishes_equal_core_numbers_across_packages ... ok
+test layout::tests::one_per_physical_core_selects_the_first_cpu_of_each_core ... ok
+test pool::scheduler_tests::circular_plan_wraps_and_records_unknown_topology ... ok
+test pool::scheduler_tests::local_lifo_and_global_fifo_precede_stealing_at_equal_priority ... ok
+test pool::scheduler_tests::priority_precedes_queue_locality_and_victim_proximity ... ok
+test pool::scheduler_tests::takes_sibling_then_local_node_then_remote_and_counts_only_transfers ... ok
+test pool::startup_tests::accepts_all_confirmations_even_after_senders_are_dropped ... ok
+test pool::startup_tests::propagates_affinity_failure_after_an_earlier_success ... ok
+test pool::startup_tests::rejects_disconnection_when_a_confirmation_is_missing ... ok
+test scope::failure_tests::caught_publication_failure_allows_more_scoped_work ... ok
+test scope::failure_tests::panicking_capture_destructor_still_drains_scope ... ok
+test scope::failure_tests::rejected_join_drops_borrowed_branch_without_running_right ... ok
+test scope::failure_tests::rejected_scoped_submission_settles_ticket_and_drains_accepted_borrows ... ok
+test steal::tests::circular_starts_after_each_worker_and_wraps_around ... ok
+test steal::tests::empty_and_single_worker_plans_have_no_victims ... ok
+test steal::tests::topology_aware_lists_every_other_worker_exactly_once ... ok
+test steal::tests::topology_aware_prioritizes_core_then_numa_then_remote_workers ... ok
+test topology::linux::tests::builds_a_sorted_numa_layout_for_online_cpus ... ok
+test topology::linux::tests::discovers_a_complete_topology_from_synthetic_sysfs ... ok
+test topology::linux::tests::discovers_a_synthetic_numa_node_when_node_online_is_absent ... ok
+test topology::linux::tests::does_not_use_the_uma_fallback_for_other_node_online_errors ... ignored, Miri cannot open a directory as a file
+test topology::linux::tests::ignores_offline_cpus_in_numa_memberships ... ok
+test topology::linux::tests::parses_an_inclusive_range ... ok
+test topology::linux::tests::parses_mixed_ids_ranges_and_trailing_newline ... ok
+test topology::linux::tests::parses_non_contiguous_cpu_ids ... ok
+test topology::linux::tests::parses_non_contiguous_numa_node_ids_and_ranges ... ok
+test topology::linux::tests::parses_one_cpu ... ok
+test topology::linux::tests::reads_core_and_package_ids_for_a_cpu ... ok
+test topology::linux::tests::reads_cpus_belonging_to_a_numa_node ... ok
+test topology::linux::tests::reads_cpus_from_a_non_contiguous_numa_node_id ... ok
+test topology::linux::tests::reads_online_cpus_from_a_sysfs_root ... ok
+test topology::linux::tests::reads_online_numa_nodes_from_a_sysfs_root ... ok
+test topology::linux::tests::rejects_an_online_cpu_present_in_multiple_numa_nodes ... ok
+test topology::linux::tests::rejects_an_online_cpu_without_a_numa_node ... ok
+test topology::linux::tests::rejects_descending_ranges ... ok
+test topology::linux::tests::rejects_duplicate_cpu_ids ... ok
+test topology::linux::tests::rejects_empty_input ... ok
+test topology::linux::tests::rejects_empty_list_elements ... ok
+test topology::linux::tests::rejects_non_numeric_cpu_ids ... ok
+test topology::linux::tests::rejects_ranges_with_too_many_bounds ... ok
+test topology::linux::tests::reports_a_missing_core_id_file ... ok
+test topology::linux::tests::reports_a_missing_numa_node_cpulist ... ok
+test topology::linux::tests::reports_a_missing_online_numa_nodes_file ... ok
+test topology::linux::tests::reports_a_non_numeric_core_id ... ok
+test topology::linux::tests::reports_an_invalid_numa_node_cpulist ... ok
+test topology::linux::tests::returns_cpu_ids_in_ascending_order ... ok
+test topology::linux::tests::same_core_number_in_different_packages_identifies_different_cores ... ok
+test topology::tests::counts_distinguish_smt_cores_and_packages ... ok
+
+test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 12.12s
+
+     Running tests/miri_core.rs (/tmp/weave-miri-phase0/miri/x86_64-unknown-linux-gnu/debug/build/weave/d20601b8a8d4a8fd/out/miri_core-d20601b8a8d4a8fd)
+
+running 4 tests
+test abandoned_handle_and_panic_release_owned_captures ... ok
+test nested_cross_pool_and_worker_local_borrows ... ok
+test parallel_mutable_slices_and_ordered_search ... ok
+test scoped_borrows_descendants_panics_and_detached_handle ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.41s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.07s
+     Running unittests src/lib.rs (/tmp/weave-miri-phase0/miri/x86_64-unknown-linux-gnu/debug/build/weave/931acf6f0330ad1c/out/weave-931acf6f0330ad1c)
+
+running 54 tests
+test builder::tests::count_transitions_preserve_names_and_allow_replacement ... ok
+test builder::tests::planned_transitions_preserve_names_and_allow_replacement ... ok
+test layout::tests::one_per_logical_cpu_creates_contiguous_worker_indices ... ok
+test layout::tests::one_per_logical_cpu_keeps_smt_siblings_as_distinct_workers ... ok
+test layout::tests::one_per_logical_cpu_preserves_cpu_order_and_hardware_relations ... ok
+test layout::tests::one_per_physical_core_creates_contiguous_worker_indices ... ok
+test layout::tests::one_per_physical_core_distinguishes_equal_core_numbers_across_packages ... ok
+test layout::tests::one_per_physical_core_selects_the_first_cpu_of_each_core ... ok
+test pool::scheduler_tests::circular_plan_wraps_and_records_unknown_topology ... ok
+test pool::scheduler_tests::local_lifo_and_global_fifo_precede_stealing_at_equal_priority ... ok
+test pool::scheduler_tests::priority_precedes_queue_locality_and_victim_proximity ... ok
+test pool::scheduler_tests::takes_sibling_then_local_node_then_remote_and_counts_only_transfers ... ok
+test pool::startup_tests::accepts_all_confirmations_even_after_senders_are_dropped ... ok
+test pool::startup_tests::propagates_affinity_failure_after_an_earlier_success ... ok
+test pool::startup_tests::rejects_disconnection_when_a_confirmation_is_missing ... ok
+test scope::failure_tests::caught_publication_failure_allows_more_scoped_work ... ok
+test scope::failure_tests::panicking_capture_destructor_still_drains_scope ... ok
+test scope::failure_tests::rejected_join_drops_borrowed_branch_without_running_right ... ok
+test scope::failure_tests::rejected_scoped_submission_settles_ticket_and_drains_accepted_borrows ... ok
+test steal::tests::circular_starts_after_each_worker_and_wraps_around ... ok
+test steal::tests::empty_and_single_worker_plans_have_no_victims ... ok
+test steal::tests::topology_aware_lists_every_other_worker_exactly_once ... ok
+test steal::tests::topology_aware_prioritizes_core_then_numa_then_remote_workers ... ok
+test topology::linux::tests::builds_a_sorted_numa_layout_for_online_cpus ... ok
+test topology::linux::tests::discovers_a_complete_topology_from_synthetic_sysfs ... ok
+test topology::linux::tests::discovers_a_synthetic_numa_node_when_node_online_is_absent ... ok
+test topology::linux::tests::does_not_use_the_uma_fallback_for_other_node_online_errors ... ignored, Miri cannot open a directory as a file
+test topology::linux::tests::ignores_offline_cpus_in_numa_memberships ... ok
+test topology::linux::tests::parses_an_inclusive_range ... ok
+test topology::linux::tests::parses_mixed_ids_ranges_and_trailing_newline ... ok
+test topology::linux::tests::parses_non_contiguous_cpu_ids ... ok
+test topology::linux::tests::parses_non_contiguous_numa_node_ids_and_ranges ... ok
+test topology::linux::tests::parses_one_cpu ... ok
+test topology::linux::tests::reads_core_and_package_ids_for_a_cpu ... ok
+test topology::linux::tests::reads_cpus_belonging_to_a_numa_node ... ok
+test topology::linux::tests::reads_cpus_from_a_non_contiguous_numa_node_id ... ok
+test topology::linux::tests::reads_online_cpus_from_a_sysfs_root ... ok
+test topology::linux::tests::reads_online_numa_nodes_from_a_sysfs_root ... ok
+test topology::linux::tests::rejects_an_online_cpu_present_in_multiple_numa_nodes ... ok
+test topology::linux::tests::rejects_an_online_cpu_without_a_numa_node ... ok
+test topology::linux::tests::rejects_descending_ranges ... ok
+test topology::linux::tests::rejects_duplicate_cpu_ids ... ok
+test topology::linux::tests::rejects_empty_input ... ok
+test topology::linux::tests::rejects_empty_list_elements ... ok
+test topology::linux::tests::rejects_non_numeric_cpu_ids ... ok
+test topology::linux::tests::rejects_ranges_with_too_many_bounds ... ok
+test topology::linux::tests::reports_a_missing_core_id_file ... ok
+test topology::linux::tests::reports_a_missing_numa_node_cpulist ... ok
+test topology::linux::tests::reports_a_missing_online_numa_nodes_file ... ok
+test topology::linux::tests::reports_a_non_numeric_core_id ... ok
+test topology::linux::tests::reports_an_invalid_numa_node_cpulist ... ok
+test topology::linux::tests::returns_cpu_ids_in_ascending_order ... ok
+test topology::linux::tests::same_core_number_in_different_packages_identifies_different_cores ... ok
+test topology::tests::counts_distinguish_smt_cores_and_packages ... ok
+
+test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 11.76s
+
+     Running tests/miri_core.rs (/tmp/weave-miri-phase0/miri/x86_64-unknown-linux-gnu/debug/build/weave/d20601b8a8d4a8fd/out/miri_core-d20601b8a8d4a8fd)
+
+running 4 tests
+test abandoned_handle_and_panic_release_owned_captures ... ok
+test nested_cross_pool_and_worker_local_borrows ... ok
+test parallel_mutable_slices_and_ordered_search ... ok
+test scoped_borrows_descendants_panics_and_detached_handle ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.71s
+

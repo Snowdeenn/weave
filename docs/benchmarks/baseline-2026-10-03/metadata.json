@@ -1,0 +1,225 @@
+{
+  "started_at_utc": "2026-10-03T10:14:37Z",
+  "reference_revision": "f0f81d30b561cfdfe70511788362770904af2ff1",
+  "remote_roadmap_revision": "1382f4a",
+  "git_status": "M .github/workflows/ci.yml\n M Cargo.toml\n M README.md\n M docs/RAPPORT_REALISATION.md\n M examples/layout.rs\n M examples/topology.rs\n M src/affinity/linux.rs\n M src/affinity/mod.rs\n M src/builder.rs\n M src/error.rs\n M src/handle.rs\n M src/iterator/adaptator.rs\n M src/iterator/enumerate.rs\n M src/iterator/filter.rs\n M src/iterator/filter_map.rs\n M src/iterator/map.rs\n M src/iterator/mod.rs\n M src/job.rs\n M src/layout.rs\n M src/lib.rs\n M src/memory/buffer.rs\n M src/memory/linux.rs\n M src/memory/mod.rs\n M src/pool.rs\n M src/scope.rs\n M src/steal.rs\n M src/storage/mod.rs\n M src/topology/linux.rs\n M src/topology/mod.rs\n M tests/affinity.rs\n M tests/build_errors.rs\n M tests/iterator_terminals.rs\n M tests/iterators.rs\n?? benchmarks/\n?? docs/ROADMAP.md\n?? docs/SCHEDULER_INVARIANTS.md\n?? docs/verification/\n?? temp_adapator.txt\n?? tests/miri_core.rs\n?? tests/safety_stress.rs",
+  "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)\nbinary: rustc\ncommit-hash: 8bab26f4f68e0e26f0bb7960be334d5b520ea452\ncommit-date: 2026-07-14\nhost: x86_64-unknown-linux-gnu\nrelease: 1.97.1\nLLVM version: 22.1.6",
+  "cargo": "cargo 1.97.1 (c980f4866 2026-06-30)",
+  "rayon": "1.12.0",
+  "profile": "release opt-level=3 lto=false codegen-units=16 debug=false",
+  "platform": "Linux-5.15.167.4-microsoft-standard-WSL2-x86_64-with-glibc2.41",
+  "cpu": "Architecture:                         x86_64\nCPU op-mode(s):                       32-bit, 64-bit\nAddress sizes:                        48 bits physical, 48 bits virtual\nByte Order:                           Little Endian\nCPU(s):                               8\nOn-line CPU(s) list:                  0-7\nVendor ID:                            AuthenticAMD\nModel name:                           AMD Ryzen 7 9700X 8-Core Processor\nCPU family:                           26\nModel:                                68\nThread(s) per core:                   1\nCore(s) per socket:                   8\nSocket(s):                            1\nStepping:                             0\nBogoMIPS:                             9382.20\nFlags:                                fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmulqdq ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand hypervisor lahf_lm cmp_legacy svm cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw topoext perfctr_core ssbd ibrs ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 erms invpcid avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves avx_vnni avx512_bf16 clzero xsaveerptr arat npt nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold v_vmsave_vmload avx512vbmi umip avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg avx512_vpopcntdq rdpid fsrm avx512_vp2intersect\nVirtualization:                       AMD-V\nHypervisor vendor:                    Microsoft\nVirtualization type:                  full\nL1d cache:                            384 KiB (8 instances)\nL1i cache:                            256 KiB (8 instances)\nL2 cache:                             8 MiB (8 instances)\nL3 cache:                             32 MiB (1 instance)\nVulnerability Gather data sampling:   Not affected\nVulnerability Itlb multihit:          Not affected\nVulnerability L1tf:                   Not affected\nVulnerability Mds:                    Not affected\nVulnerability Meltdown:               Not affected\nVulnerability Mmio stale data:        Not affected\nVulnerability Reg file data sampling: Not affected\nVulnerability Retbleed:               Not affected\nVulnerability Spec rstack overflow:   Not affected\nVulnerability Spec store bypass:      Mitigation; Speculative Store Bypass disabled via prctl and seccomp\nVulnerability Spectre v1:             Mitigation; usercopy/swapgs barriers and __user pointer sanitization\nVulnerability Spectre v2:             Mitigation; Retpolines; IBPB conditional; IBRS_FW; STIBP disabled; RSB filling; PBRSB-eIBRS Not affected; BHI Not affected\nVulnerability Srbds:                  Not affected\nVulnerability Tsx async abort:        Not affected",
+  "memory": "MemTotal:       15923220 kB\nMemFree:        15037612 kB\nMemAvailable:   15216024 kB\nBuffers:           25428 kB\nCached:           388720 kB\nSwapCached:            0 kB\nActive:            98780 kB\nInactive:         470360 kB\nActive(anon):       2660 kB\nInactive(anon):   155708 kB\nActive(file):      96120 kB\nInactive(file):   314652 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:       4194304 kB\nSwapFree:        4194304 kB\nDirty:              5916 kB\nWriteback:             0 kB\nAnonPages:        149120 kB\nMapped:           203712 kB\nShmem:              3104 kB\nKReclaimable:      28560 kB\nSlab:              78716 kB\nSReclaimable:      28560 kB\nSUnreclaim:        50156 kB\nKernelStack:        3572 kB\nPageTables:         3472 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    12155912 kB\nCommitted_AS:     725692 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:       24940 kB\nVmallocChunk:          0 kB\nPercpu:             3072 kB\nAnonHugePages:     43008 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:       89088 kB\nDirectMap2M:     5736448 kB\nDirectMap1G:    18874368 kB\n",
+  "kernel": "Linux PC-Snow 5.15.167.4-microsoft-standard-WSL2 #1 SMP Tue Nov 5 00:21:55 UTC 2024 x86_64 GNU/Linux",
+  "allowed_cpus": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "workers": [
+    1,
+    2,
+    4,
+    8
+  ],
+  "placement": "OS default; no pinning for any engine",
+  "numa_sysfs_present": false,
+  "warmups_per_scenario_engine": 2,
+  "samples": 9,
+  "load_average_before": [
+    0.82080078125,
+    0.39111328125,
+    0.1474609375
+  ],
+  "rustflags": "",
+  "source_sha256": {
+    "Cargo.lock": "cb8464b9d7f1af60ff8f3935ee86693d5bb089457c822672b7fb6f7f3f366886",
+    "Cargo.toml": "d39c3b33f266301feca75fe47ae19f04e669f19f88f577abe1a63522ff9155fe",
+    "benchmarks/Cargo.lock": "7faa6860fa0d85e9747c6b9902ffc5a4a37e886dcb2737fca8d971356f7dc00b",
+    "benchmarks/Cargo.toml": "2b93366733b690c6b3d55d43650c16f95cf53d441ff61f6663efabef7bcb4820",
+    "benchmarks/run.py": "a9de633905e66fdbe6609265690a562d0cf0ca735f508977d79335a551507388",
+    "benchmarks/src/main.rs": "18748020e858eb2d9d5e7186497b6a484b9f3a70bf449e6bad4aa06b33b9c39a",
+    "examples/layout.rs": "6f52f381dfb409e43815c3378dff860b240f1f2bdb2cec63eade584779880650",
+    "examples/topology.rs": "6a7ca726eac60c43b2acaca89ebc95f22bdc9b568a00545fae7f7a0d740d12d2",
+    "examples/tour.rs": "8fb4dd94defdfa6caef3ad9a1cd67940101facedba9def2b3c2abb3612abee25",
+    "src/affinity/linux.rs": "c94927b759e3c6d9b9c35ac035eb82ed7572ebdb0d7dcece6aaebdc1ad1f1a56",
+    "src/affinity/mod.rs": "3029c37309219f86c886eba79fa170d1252361b74119c55638c966ad741af83e",
+    "src/builder.rs": "510a76925cd68cbbc4d6b5a18d08f171a98149cee013234f43b56a030bd1d6c5",
+    "src/cache_padded.rs": "34950b95f8bc5391bbb015358f6b496d187275c4ec0ab288b7f165c74a434dcb",
+    "src/error.rs": "35f01576412eca0c8b316ca87298a1d9b17d3592ffb019349e9d3f646a3f1884",
+    "src/handle.rs": "7e03809976045a72bd1cb8508c1c3eb75f8594fb4f876a89014fe34a1e9486f2",
+    "src/iterator/adaptator.rs": "44968c342487fde9ff77dc63d9d7c86bcee8fad100524bf78b9038f9dd471906",
+    "src/iterator/chunk_aligned.rs": "e967859c5a4a0826f8c85436bd41e6df45438888cd2f6bfe9eb6454d8018af69",
+    "src/iterator/enumerate.rs": "1039218aa39fd14879971eafc747c412eb65f8adca90a977465edd5cf17cb7e6",
+    "src/iterator/filter.rs": "9a496644af8c01c8be65be8799e136a8bef21b793db00473f53f133ee8c37268",
+    "src/iterator/filter_map.rs": "375976ab9be70d760aa59bef16b5b48865f1e63f9f2d5795556c8928809790de",
+    "src/iterator/map.rs": "5bce59fb7e60e6ea0ba47a339522df7fbd076995e9d6c3b7dad51b6e551039b0",
+    "src/iterator/mod.rs": "1e7b240f3fcb6c7179862a772e59c69739e9356322100dfbeda3f280696dd4a7",
+    "src/iterator/range.rs": "31de49bd6c31a91279dd2311eb431de59a85ac7e38a46b4caec8faf735228a34",
+    "src/iterator/slice.rs": "e781e08cb2ca822351454986d34d25a6ab5d97613c1ee274388805a270356594",
+    "src/job.rs": "7a6a152b3285d269f8dd46ff5b2c22690fef76b00dd6bd3c0eda4cfb6555ba57",
+    "src/layout.rs": "ad50c83bb3d3d43046cf37daf617e8464abd96c7d4474d246ac56b9b5c2e7d33",
+    "src/lib.rs": "f04f3f63adbf68a66594bf58dadacc3d04eef580cfcf69b95bb7035585c429bc",
+    "src/memory/buffer.rs": "346f0dd910c5cd025cb8d54f6edb84b72211bebc5b3254606d4436c0b3504d08",
+    "src/memory/linux.rs": "6877523026984ac769a9f60f0e21a0542cf6e1dc88cd92e8df7ae85d5974f808",
+    "src/memory/mod.rs": "52af742965ab84d406b936444dd9175a8866afaaa9756ba1615bef42482a9a01",
+    "src/pool.rs": "4b51a2f0bce802b23f93c62c41ab0e58235bafa1505251c974aa12a3e4ab814f",
+    "src/scope.rs": "343602b6932dcf8d4e5f93d2b2009a7b0da9af2921eb530ba0afac75be2cc15b",
+    "src/steal.rs": "9b314ec2190acc784333a53bd050ae9098220de3b5b8de1acc9013fd08b36c9a",
+    "src/storage/local.rs": "9b636c6b71852149faaebb766d2f28f7a642b6b6971b1a305a879ecfe56bd16e",
+    "src/storage/mod.rs": "9e2155b3967fb953a9cefaaff5f333e6943da36349c07664bbaf329ad2d98f62",
+    "src/topology/linux.rs": "0987ac053f9937f01038347461ec8f63931fe41df99ec56ad084404604d48999",
+    "src/topology/mod.rs": "f5392f9ecfae26ef776e68a65571d4ddcd666c7f4bd3a8f07da81dab0c000dbd",
+    "tests/affinity.rs": "c3ad5c1ec452a0d64bbdfa54e25434496461e9b570ade5c2dc7f2b8e3c385464",
+    "tests/build_errors.rs": "514509aa5921faed5962b677ad5639220a5431c5e3d86bd17ee93b80f98f44c0",
+    "tests/iterator_terminals.rs": "6437f267bdeaa003aa4a73339e149fb774b0ea2a4e2334213caf4f1c5eadadf4",
+    "tests/iterators.rs": "d7ab2c13ae5ae114877f0194c68309de25cd31d8fcd2d4bf044202e07f18808a",
+    "tests/miri_core.rs": "0f5027585655ac9e55c9d9cc44ef71df8a418cc917e7cf226cacba3f041c75ea",
+    "tests/pool.rs": "e6aa5d0922e1bbe78be5ff378032460e4c986e04a4b40ce0c7565da0e645e4b5",
+    "tests/safety_stress.rs": "9badfabf703bdf9796ba945398248479bb8cd7ce445f25e7618d79fe9949fcca"
+  },
+  "limitations": [
+    "Shared WSL host; CPU frequency and competing Windows load are not controlled.",
+    "Warmups and engine order are fixed; no statistical significance or regression thresholds claimed.",
+    "Allocation calls/requested bytes are not peak live bytes, RSS or retained memory.",
+    "Contention clocks/try_lock/atomics perturb scheduling; diagnostic timings are not throughput baselines.",
+    "Rayon has no priority/submit-handle API equivalent: those rows compare checksum-producing work, not identical API semantics.",
+    "spawn_empty includes observable accounting and a Weave completion channel; it is not pure empty dispatch.",
+    "Cache events, bandwidth, P/E cores and multi-NUMA access require controlled hardware/profiling.",
+    "Batch, cancellation and telemetry are not implemented; their section-9 rows are deferred.",
+    "No remote GitHub Actions result is claimed."
+  ],
+  "commands": [
+    [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--release",
+      "--manifest-path",
+      "benchmarks/Cargo.toml"
+    ],
+    [
+      "/tmp/weave-bench-phase0/release/weave-baseline",
+      "time",
+      "1"
+    ],
+    [
+      "/tmp/weave-bench-phase0/release/weave-baseline",
+      "time",
+      "2"
+    ],
+    [
+      "/tmp/weave-bench-phase0/release/weave-baseline",
+      "time",
+      "4"
+    ],
+    [
+      "/tmp/weave-bench-phase0/release/weave-baseline",
+      "time",
+      "8"
+    ],
+    [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--release",
+      "--manifest-path",
+      "benchmarks/Cargo.toml"
+    ],
+    [
+      "/tmp/weave-bench-phase0/release/weave-baseline",
+      "latency",
+      "1"
+    ],
+    [
+      "/tmp/weave-bench-phase0/release/weave-baseline",
+      "latency",
+      "2"
+    ],
+    [
+      "/tmp/weave-bench-phase0/release/weave-baseline",
+      "latency",
+      "4"
+    ],
+    [
+      "/tmp/weave-bench-phase0/release/weave-baseline",
+      "latency",
+      "8"
+    ],
+    [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--release",
+      "--manifest-path",
+      "benchmarks/Cargo.toml",
+      "--features",
+      "allocation-metrics"
+    ],
+    [
+      "/tmp/weave-bench-phase0/release/weave-baseline",
+      "allocations",
+      "1"
+    ],
+    [
+      "/tmp/weave-bench-phase0/release/weave-baseline",
+      "allocations",
+      "2"
+    ],
+    [
+      "/tmp/weave-bench-phase0/release/weave-baseline",
+      "allocations",
+      "4"
+    ],
+    [
+      "/tmp/weave-bench-phase0/release/weave-baseline",
+      "allocations",
+      "8"
+    ],
+    [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--release",
+      "--manifest-path",
+      "benchmarks/Cargo.toml",
+      "--features",
+      "scheduler-metrics"
+    ],
+    [
+      "/tmp/weave-bench-phase0/release/weave-baseline",
+      "contention",
+      "1"
+    ],
+    [
+      "/tmp/weave-bench-phase0/release/weave-baseline",
+      "contention",
+      "2"
+    ],
+    [
+      "/tmp/weave-bench-phase0/release/weave-baseline",
+      "contention",
+      "4"
+    ],
+    [
+      "/tmp/weave-bench-phase0/release/weave-baseline",
+      "contention",
+      "8"
+    ]
+  ],
+  "finished_at_utc": "2026-10-03T10:15:11Z",
+  "load_average_after": [
+    1.37646484375,
+    0.57568359375,
+    0.2177734375
+  ]
+}

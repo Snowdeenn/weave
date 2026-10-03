@@ -1,0 +1,276 @@
+{
+  "schema_version": 1,
+  "reference_revision": "f0f81d30b561cfdfe70511788362770904af2ff1",
+  "note": "Association fonctionnelle, pas une mesure de couverture de lignes. Les sélecteurs visent des déclarations #[test]; les doctests et exemples sont indiqués séparément.",
+  "features": [
+    {
+      "id": "construction",
+      "contract": "Builder automatique, compte fixe ou layout; validation et démarrage",
+      "sources": [
+        "src/builder.rs",
+        "src/error.rs"
+      ],
+      "tests": [
+        "src/builder.rs#*",
+        "src/pool.rs#*confirmations*",
+        "src/pool.rs#*affinity_failure*",
+        "tests/build_errors.rs#*",
+        "tests/pool.rs#builder_*"
+      ],
+      "doctests": [
+        "src/builder.rs"
+      ],
+      "platform": "all"
+    },
+    {
+      "id": "pool",
+      "contract": "Soumission, handles, coopération, paniques, arrêt, isolation entre pools",
+      "sources": [
+        "src/pool.rs",
+        "src/handle.rs",
+        "src/job.rs"
+      ],
+      "tests": [
+        "tests/pool.rs#*",
+        "src/pool.rs#*",
+        "tests/safety_stress.rs#*",
+        "tests/miri_core.rs#*"
+      ],
+      "platform": "all"
+    },
+    {
+      "id": "scope",
+      "contract": "Emprunts et descendants terminés avant la sortie; propagation des paniques",
+      "sources": [
+        "src/scope.rs"
+      ],
+      "tests": [
+        "tests/pool.rs#scope*",
+        "tests/pool.rs#scoped*",
+        "src/scope.rs#*"
+      ],
+      "doctests": [
+        "src/scope.rs"
+      ],
+      "platform": "all"
+    },
+    {
+      "id": "worker-local",
+      "contract": "Valeur par worker, isolation du pool, réentrance, poison et récupération",
+      "sources": [
+        "src/storage/mod.rs",
+        "src/storage/local.rs",
+        "src/cache_padded.rs"
+      ],
+      "tests": [
+        "tests/pool.rs#worker_local*",
+        "tests/pool.rs#every_worker*"
+      ],
+      "platform": "all",
+      "limits": [
+        "CachePadded: utilisation indirecte; pas de test dédié d'alignement."
+      ]
+    },
+    {
+      "id": "layout",
+      "contract": "Un worker par CPU ou cœur, indices contigus et relations matérielles",
+      "sources": [
+        "src/layout.rs"
+      ],
+      "tests": [
+        "src/layout.rs#*"
+      ],
+      "platform": "all"
+    },
+    {
+      "id": "stealing",
+      "contract": "Ordre circulaire ou cœur/NUMA/distant; priorité et compte des transferts",
+      "sources": [
+        "src/steal.rs"
+      ],
+      "tests": [
+        "src/steal.rs#*",
+        "src/pool.rs#*steal*",
+        "src/pool.rs#*proximity*",
+        "src/pool.rs#*transfers*",
+        "src/pool.rs#*topology*",
+        "tests/pool.rs#workers_really*"
+      ],
+      "platform": "all"
+    },
+    {
+      "id": "affinity",
+      "contract": "Affinité Linux; erreurs et confirmation de chaque worker",
+      "sources": [
+        "src/affinity/mod.rs",
+        "src/affinity/linux.rs"
+      ],
+      "tests": [
+        "src/affinity/linux.rs#*",
+        "tests/affinity.rs#*",
+        "tests/build_errors.rs#*",
+        "src/pool.rs#*affinity_failure*"
+      ],
+      "platform": "linux (réel), all (erreurs)",
+      "limits": [
+        "Les deux tests d'intégration reviennent sans assertion si le layout contient des CPU interdits; vérifier --nocapture."
+      ]
+    },
+    {
+      "id": "iterator-sources",
+      "contract": "Ranges usize, slices partagées/mutables, chunks et limites de découpage",
+      "sources": [
+        "src/iterator/range.rs",
+        "src/iterator/slice.rs",
+        "src/iterator/chunk_aligned.rs"
+      ],
+      "tests": [
+        "tests/iterators.rs#*boundaries*",
+        "tests/iterators.rs#slices*",
+        "tests/iterators.rs#chunks*",
+        "tests/iterators.rs#empty_reversed*"
+      ],
+      "platform": "all"
+    },
+    {
+      "id": "iterator-adapters",
+      "contract": "Map paresseux, filter, filter_map et enumerate ordonnés",
+      "sources": [
+        "src/iterator/map.rs",
+        "src/iterator/filter.rs",
+        "src/iterator/filter_map.rs",
+        "src/iterator/enumerate.rs"
+      ],
+      "tests": [
+        "tests/iterators.rs#*",
+        "tests/iterator_terminals.rs#enumerated*",
+        "tests/iterator_terminals.rs#searches*"
+      ],
+      "platform": "all"
+    },
+    {
+      "id": "iterator-terminals",
+      "contract": "Consumer/drive; for_each, fold/reduce, collect/fill, agrégats, recherche, extend",
+      "sources": [
+        "src/iterator/mod.rs",
+        "src/iterator/adaptator.rs"
+      ],
+      "tests": [
+        "tests/iterator_terminals.rs#*",
+        "tests/iterators.rs#operations*",
+        "tests/iterators.rs#fold*",
+        "tests/iterators.rs#fill*",
+        "tests/iterators.rs#iterator_panics*"
+      ],
+      "platform": "all"
+    },
+    {
+      "id": "topology",
+      "contract": "Identifiants CPU/cœur/package/NUMA, comptages et découverte sysfs validée",
+      "sources": [
+        "src/topology/mod.rs",
+        "src/topology/linux.rs"
+      ],
+      "tests": [
+        "src/topology/mod.rs#*",
+        "src/topology/linux.rs#*"
+      ],
+      "doctests": [
+        "src/topology/mod.rs"
+      ],
+      "platform": "linux (découverte), all (représentation)"
+    },
+    {
+      "id": "memory-errors",
+      "contract": "Erreurs mémoire et politique NUMA; source de l'erreur de réservation",
+      "sources": [
+        "src/memory/mod.rs"
+      ],
+      "tests": [
+        "src/memory/linux.rs#reservation_failure*",
+        "src/memory/linux.rs#*node*"
+      ],
+      "platform": "linux (tests existants)",
+      "limits": [
+        "Display et chaînes source OS/Topology ne disposent pas de tests dédiés."
+      ]
+    },
+    {
+      "id": "mapping",
+      "contract": "Mapping typé, capacité, alignement, limites de taille, masques NUMA et munmap",
+      "sources": [
+        "src/memory/linux.rs"
+      ],
+      "tests": [
+        "src/memory/linux.rs#*"
+      ],
+      "platform": "linux"
+    },
+    {
+      "id": "numa-buffer",
+      "contract": "Préfixe initialisé, push fixe, slices, Default et destruction sous politique acceptée",
+      "sources": [
+        "src/memory/buffer.rs"
+      ],
+      "tests": [
+        "src/memory/buffer.rs#*"
+      ],
+      "doctests": [
+        "src/memory/buffer.rs"
+      ],
+      "platform": "linux",
+      "limits": [
+        "Sept tests ignorés par défaut, dont six exigent mbind; aucune preuve de résidence physique des pages."
+      ]
+    },
+    {
+      "id": "public-api",
+      "contract": "Exports publics et documentation",
+      "sources": [
+        "src/lib.rs"
+      ],
+      "tests": [
+        "tests/pool.rs#*",
+        "tests/iterators.rs#*",
+        "tests/build_errors.rs#*"
+      ],
+      "checks": [
+        "cargo rustdoc --locked --lib -- -D warnings -D missing-docs",
+        "cargo test --locked --doc"
+      ],
+      "platform": "all"
+    },
+    {
+      "id": "examples",
+      "contract": "Compilation des trois exemples et assertions de tour",
+      "sources": [
+        "examples/tour.rs",
+        "examples/topology.rs",
+        "examples/layout.rs"
+      ],
+      "tests": [],
+      "checks": [
+        "cargo test --locked --all-targets",
+        "cargo run --locked --example tour",
+        "cargo run --locked --example topology (Linux)",
+        "cargo run --locked --example layout (Linux, CPUs du layout autorisés)"
+      ],
+      "platform": "all (compilation/tour), linux (topology/layout)"
+    },
+    {
+      "id": "mesure-initiale",
+      "contract": "Comparaison Weave/Rayon/séquentiel, métriques isolées et checksums",
+      "sources": [
+        "benchmarks/src/main.rs"
+      ],
+      "tests": [],
+      "checks": [
+        "python3 benchmarks/run.py --workers 1,2,4,8 --samples 9"
+      ],
+      "platform": "linux (runner)",
+      "limits": [
+        "Hardware avancé et API futures explicitement différés."
+      ]
+    }
+  ]
+}

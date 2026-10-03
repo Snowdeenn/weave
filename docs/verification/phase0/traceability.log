@@ -1,0 +1,19 @@
+warning: in the working copy of '.github/workflows/ci.yml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Cargo.toml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/RAPPORT_REALISATION.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/affinity/linux.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/affinity/mod.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/handle.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/job.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/lib.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/memory/linux.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/memory/mod.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/pool.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/scope.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/topology/linux.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/affinity.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/iterator_terminals.rs', LF will be replaced by CRLF the next time Git touches it
+Traceability valid: 17 features, 144 declared tests, 7 ignored.
+Reference: f0f81d30b561cfdfe70511788362770904af2ff1; HEAD: f0f81d30b561cfdfe70511788362770904af2ff1; report: target/verification/traceability.json
+This checks associations and revision identity; it does not execute tests or measure line coverage.

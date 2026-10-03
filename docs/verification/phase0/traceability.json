@@ -1,0 +1,2236 @@
+{
+  "reference_revision": "f0f81d30b561cfdfe70511788362770904af2ff1",
+  "working_head": "f0f81d30b561cfdfe70511788362770904af2ff1",
+  "generated_at_utc": "2026-10-03T10:18:46.0817612Z",
+  "note": "Association fonctionnelle, pas une mesure de couverture de lignes. Les sélecteurs visent des déclarations #[test]; les doctests et exemples sont indiqués séparément.",
+  "baseline_files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "git_blob": "4e9fc235532315f271ceb07fbff22e1d998ac3f7"
+    },
+    {
+      "path": ".gitignore",
+      "git_blob": "9f970225adb6a6ada5c22d46d02684b6b0f5525e"
+    },
+    {
+      "path": "Cargo.lock",
+      "git_blob": "810bf118b3c8213020a0916650ae4cdb2e02122d"
+    },
+    {
+      "path": "Cargo.toml",
+      "git_blob": "412fbd6cd2402c8e99b0c5da744d8ab4ea308081"
+    },
+    {
+      "path": "README.md",
+      "git_blob": "d7b95709ae492213980a67fc6397a88fa30aee56"
+    },
+    {
+      "path": "docs/RAPPORT_REALISATION.md",
+      "git_blob": "6f8ef9597f4c684a396a13f9a3e277d23f1be02c"
+    },
+    {
+      "path": "examples/layout.rs",
+      "git_blob": "5bb1cfd62e8253af7391282377b7de3e9e34fd3f"
+    },
+    {
+      "path": "examples/topology.rs",
+      "git_blob": "82830ec5875289ebd07e004f3dbaf325f3b69ef7"
+    },
+    {
+      "path": "examples/tour.rs",
+      "git_blob": "dafc6757b2f9d5ec34f4a4c7925e2e49b7981067"
+    },
+    {
+      "path": "src/affinity/linux.rs",
+      "git_blob": "8ac6f5d46c248d7ef2de7ce2322295307b62becb"
+    },
+    {
+      "path": "src/affinity/mod.rs",
+      "git_blob": "275daeb4ad28adce896563ce6f3b9b05a76f6692"
+    },
+    {
+      "path": "src/builder.rs",
+      "git_blob": "f0442fd7cc87626e4c1ddde085b672679b81dfd2"
+    },
+    {
+      "path": "src/cache_padded.rs",
+      "git_blob": "aa5fb810fb09303c1d70bb76a362b5986f65192a"
+    },
+    {
+      "path": "src/error.rs",
+      "git_blob": "af51fa1dd65726e41d7ab61a476309218756b451"
+    },
+    {
+      "path": "src/handle.rs",
+      "git_blob": "fc7d8cdd037f849193a09f642d336e46aba3a2f2"
+    },
+    {
+      "path": "src/iterator/adaptator.rs",
+      "git_blob": "ee817507cdcfa4a0011861cbcb7cc4e7cc61f540"
+    },
+    {
+      "path": "src/iterator/chunk_aligned.rs",
+      "git_blob": "e4fedc068fd97c1ceb1a7b2c49d62c7292499b91"
+    },
+    {
+      "path": "src/iterator/enumerate.rs",
+      "git_blob": "ebfc765a623725159ff1e896f4fc58ed1d71af6e"
+    },
+    {
+      "path": "src/iterator/filter.rs",
+      "git_blob": "c05164ead4f1f5e0a5f9202625e5cbeed520001b"
+    },
+    {
+      "path": "src/iterator/filter_map.rs",
+      "git_blob": "5feda28299210c25f4cfffee58faf0f0764d8e50"
+    },
+    {
+      "path": "src/iterator/map.rs",
+      "git_blob": "4fd12596087bb36ea693ffa694a41c577f4beb8c"
+    },
+    {
+      "path": "src/iterator/mod.rs",
+      "git_blob": "bb700712d2f7b07282f33ce8788382aa1c463a39"
+    },
+    {
+      "path": "src/iterator/range.rs",
+      "git_blob": "2265328239dadc59a1c622772414ae6625883011"
+    },
+    {
+      "path": "src/iterator/slice.rs",
+      "git_blob": "0c5a63c5b8fb177ab653e64072f2a3537dd25152"
+    },
+    {
+      "path": "src/job.rs",
+      "git_blob": "37dc3875b3de660830fc08d55d336dfa92918c73"
+    },
+    {
+      "path": "src/layout.rs",
+      "git_blob": "10ea91e5613a523d7b76e4b7b7fa840c03516c60"
+    },
+    {
+      "path": "src/lib.rs",
+      "git_blob": "b3c1c78fa04e69482e7f21b8bed9cd84e98dbd49"
+    },
+    {
+      "path": "src/memory/buffer.rs",
+      "git_blob": "28fdb554b960a828247b4079afa18acc725e2d3c"
+    },
+    {
+      "path": "src/memory/linux.rs",
+      "git_blob": "6b29d3041849a1f7123a8e683af1ebf4988c6069"
+    },
+    {
+      "path": "src/memory/mod.rs",
+      "git_blob": "335f74c04e41e8eea18ee51781d55a36d28c138f"
+    },
+    {
+      "path": "src/pool.rs",
+      "git_blob": "a5700980176aee4b784fbebdcaa92beaf38b8f6e"
+    },
+    {
+      "path": "src/scope.rs",
+      "git_blob": "14745a599de72bd69f0c82f7acc0f89a82e5410b"
+    },
+    {
+      "path": "src/steal.rs",
+      "git_blob": "59de02e01d0b89c2f2b3a7fd538834985df033c0"
+    },
+    {
+      "path": "src/storage/local.rs",
+      "git_blob": "1927194c6c0158224c195f0fb2c28d28f6cd306d"
+    },
+    {
+      "path": "src/storage/mod.rs",
+      "git_blob": "27099624c4d9c81b5e674f44fb3eddaa71c0bd1e"
+    },
+    {
+      "path": "src/topology/linux.rs",
+      "git_blob": "31541cf3ded5f92fc6c0607d9ea22e3c8bd2c8b4"
+    },
+    {
+      "path": "src/topology/mod.rs",
+      "git_blob": "fd117aacb4e7ed4df029360dd6bf580ab0c29183"
+    },
+    {
+      "path": "tests/affinity.rs",
+      "git_blob": "2180daf6d6d086b791845e64ab4723c99719aa36"
+    },
+    {
+      "path": "tests/build_errors.rs",
+      "git_blob": "b7112bf710e2e77f1bd7a664828bca58fc822f36"
+    },
+    {
+      "path": "tests/iterator_terminals.rs",
+      "git_blob": "e4f6273d0a8cd58b28fb366316eb037757c2847e"
+    },
+    {
+      "path": "tests/iterators.rs",
+      "git_blob": "e93aeee9998c480c56dfbabc78defe9ca5b3f26f"
+    },
+    {
+      "path": "tests/pool.rs",
+      "git_blob": "f939e9a5664af76cdcc1ba47fd11e36a94b136e3"
+    }
+  ],
+  "working_code_files": [
+    {
+      "path": "benchmarks/src/main.rs",
+      "sha256": "18748020E858EB2D9D5E7186497B6A484B9F3A70BF449E6BAD4AA06B33B9C39A"
+    },
+    {
+      "path": "examples/layout.rs",
+      "sha256": "6F52F381DFB409E43815C3378DFF860B240F1F2BDB2CEC63EADE584779880650"
+    },
+    {
+      "path": "examples/topology.rs",
+      "sha256": "6A7CA726EAC60C43B2ACACA89EBC95F22BDC9B568A00545FAE7F7A0D740D12D2"
+    },
+    {
+      "path": "examples/tour.rs",
+      "sha256": "8FB4DD94DEFDFA6CAEF3AD9A1CD67940101FACEDBA9DEF2B3C2ABB3612ABEE25"
+    },
+    {
+      "path": "src/affinity/linux.rs",
+      "sha256": "C94927B759E3C6D9B9C35AC035EB82ED7572EBDB0D7DCECE6AAEBDC1AD1F1A56"
+    },
+    {
+      "path": "src/affinity/mod.rs",
+      "sha256": "3029C37309219F86C886EBA79FA170D1252361B74119C55638C966AD741AF83E"
+    },
+    {
+      "path": "src/builder.rs",
+      "sha256": "510A76925CD68CBBC4D6B5A18D08F171A98149CEE013234F43B56A030BD1D6C5"
+    },
+    {
+      "path": "src/cache_padded.rs",
+      "sha256": "34950B95F8BC5391BBB015358F6B496D187275C4EC0AB288B7F165C74A434DCB"
+    },
+    {
+      "path": "src/error.rs",
+      "sha256": "35F01576412ECA0C8B316CA87298A1D9B17D3592FFB019349E9D3F646A3F1884"
+    },
+    {
+      "path": "src/handle.rs",
+      "sha256": "7E03809976045A72BD1CB8508C1C3EB75F8594FB4F876A89014FE34A1E9486F2"
+    },
+    {
+      "path": "src/iterator/adaptator.rs",
+      "sha256": "44968C342487FDE9FF77DC63D9D7C86BCEE8FAD100524BF78B9038F9DD471906"
+    },
+    {
+      "path": "src/iterator/chunk_aligned.rs",
+      "sha256": "E967859C5A4A0826F8C85436BD41E6DF45438888CD2F6BFE9EB6454D8018AF69"
+    },
+    {
+      "path": "src/iterator/enumerate.rs",
+      "sha256": "1039218AA39FD14879971EAFC747C412EB65F8ADCA90A977465EDD5CF17CB7E6"
+    },
+    {
+      "path": "src/iterator/filter_map.rs",
+      "sha256": "375976AB9BE70D760AA59BEF16B5B48865F1E63F9F2D5795556C8928809790DE"
+    },
+    {
+      "path": "src/iterator/filter.rs",
+      "sha256": "9A496644AF8C01C8BE65BE8799E136A8BEF21B793DB00473F53F133EE8C37268"
+    },
+    {
+      "path": "src/iterator/map.rs",
+      "sha256": "5BCE59FB7E60E6EA0BA47A339522DF7FBD076995E9D6C3B7DAD51B6E551039B0"
+    },
+    {
+      "path": "src/iterator/mod.rs",
+      "sha256": "1E7B240F3FCB6C7179862A772E59C69739E9356322100DFBEDA3F280696DD4A7"
+    },
+    {
+      "path": "src/iterator/range.rs",
+      "sha256": "31DE49BD6C31A91279DD2311EB431DE59A85AC7E38A46B4CAEC8FAF735228A34"
+    },
+    {
+      "path": "src/iterator/slice.rs",
+      "sha256": "E781E08CB2CA822351454986D34D25A6AB5D97613C1EE274388805A270356594"
+    },
+    {
+      "path": "src/job.rs",
+      "sha256": "7A6A152B3285D269F8DD46FF5B2C22690FEF76B00DD6BD3C0EDA4CFB6555BA57"
+    },
+    {
+      "path": "src/layout.rs",
+      "sha256": "AD50C83BB3D3D43046CF37DAF617E8464ABD96C7D4474D246AC56B9B5C2E7D33"
+    },
+    {
+      "path": "src/lib.rs",
+      "sha256": "F04F3F63ADBF68A66594BF58DADACC3D04EEF580CFCF69B95BB7035585C429BC"
+    },
+    {
+      "path": "src/memory/buffer.rs",
+      "sha256": "346F0DD910C5CD025CB8D54F6EDB84B72211BEBC5B3254606D4436C0B3504D08"
+    },
+    {
+      "path": "src/memory/linux.rs",
+      "sha256": "6877523026984AC769A9F60F0E21A0542CF6E1DC88CD92E8DF7AE85D5974F808"
+    },
+    {
+      "path": "src/memory/mod.rs",
+      "sha256": "52AF742965AB84D406B936444DD9175A8866AFAAA9756BA1615BEF42482A9A01"
+    },
+    {
+      "path": "src/pool.rs",
+      "sha256": "4B51A2F0BCE802B23F93C62C41AB0E58235BAFA1505251C974AA12A3E4AB814F"
+    },
+    {
+      "path": "src/scope.rs",
+      "sha256": "343602B6932DCF8D4E5F93D2B2009A7B0DA9AF2921EB530BA0AFAC75BE2CC15B"
+    },
+    {
+      "path": "src/steal.rs",
+      "sha256": "9B314EC2190ACC784333A53BD050AE9098220DE3B5B8DE1ACC9013FD08B36C9A"
+    },
+    {
+      "path": "src/storage/local.rs",
+      "sha256": "9B636C6B71852149FAAEBB766D2F28F7A642B6B6971B1A305A879ECFE56BD16E"
+    },
+    {
+      "path": "src/storage/mod.rs",
+      "sha256": "9E2155B3967FB953A9CEFAAFF5F333E6943DA36349C07664BBAF329AD2D98F62"
+    },
+    {
+      "path": "src/topology/linux.rs",
+      "sha256": "0987AC053F9937F01038347461EC8F63931FE41DF99EC56AD084404604D48999"
+    },
+    {
+      "path": "src/topology/mod.rs",
+      "sha256": "F5392F9ECFAE26EF776E68A65571D4DDCD666C7F4BD3A8F07DA81DAB0C000DBD"
+    },
+    {
+      "path": "tests/affinity.rs",
+      "sha256": "C3AD5C1EC452A0D64BBDFA54E25434496461E9B570ADE5C2DC7F2B8E3C385464"
+    },
+    {
+      "path": "tests/build_errors.rs",
+      "sha256": "514509AA5921FAED5962B677AD5639220A5431C5E3D86BD17EE93B80F98F44C0"
+    },
+    {
+      "path": "tests/iterator_terminals.rs",
+      "sha256": "6437F267BDEAA003AA4A73339E149FB774B0EA2A4E2334213CAF4F1C5EADADF4"
+    },
+    {
+      "path": "tests/iterators.rs",
+      "sha256": "D7AB2C13AE5AE114877F0194C68309DE25CD31D8FCD2D4BF044202E07F18808A"
+    },
+    {
+      "path": "tests/miri_core.rs",
+      "sha256": "0F5027585655AC9E55C9D9CC44EF71DF8A418CC917E7CF226CACBA3F041C75EA"
+    },
+    {
+      "path": "tests/pool.rs",
+      "sha256": "E6AA5D0922E1BBE78BE5FF378032460E4C986E04A4B40CE0C7565DA0E645E4B5"
+    },
+    {
+      "path": "tests/safety_stress.rs",
+      "sha256": "9BADFABF703BDF9796BA945398248479BB8CD7CE445F25E7618D79FE9949FCCA"
+    }
+  ],
+  "changed_tracked_files": [
+    ".github/workflows/ci.yml",
+    "Cargo.toml",
+    "README.md",
+    "docs/RAPPORT_REALISATION.md",
+    "src/affinity/linux.rs",
+    "src/affinity/mod.rs",
+    "src/handle.rs",
+    "src/iterator/enumerate.rs",
+    "src/job.rs",
+    "src/lib.rs",
+    "src/memory/linux.rs",
+    "src/memory/mod.rs",
+    "src/pool.rs",
+    "src/scope.rs",
+    "src/topology/linux.rs",
+    "tests/affinity.rs",
+    "tests/iterator_terminals.rs"
+  ],
+  "working_status": [
+    " M .github/workflows/ci.yml",
+    " M Cargo.toml",
+    " M README.md",
+    " M docs/RAPPORT_REALISATION.md",
+    " M src/affinity/linux.rs",
+    " M src/affinity/mod.rs",
+    " M src/handle.rs",
+    " M src/iterator/enumerate.rs",
+    " M src/job.rs",
+    " M src/lib.rs",
+    " M src/memory/linux.rs",
+    " M src/memory/mod.rs",
+    " M src/pool.rs",
+    " M src/scope.rs",
+    " M src/topology/linux.rs",
+    " M tests/affinity.rs",
+    " M tests/iterator_terminals.rs",
+    "?? benchmarks/",
+    "?? docs/ROADMAP.md",
+    "?? docs/SCHEDULER_INVARIANTS.md",
+    "?? docs/benchmarks/",
+    "?? docs/verification/",
+    "?? temp_adapator.txt",
+    "?? tests/miri_core.rs",
+    "?? tests/safety_stress.rs"
+  ],
+  "discovered_tests": 144,
+  "ignored_tests": 7,
+  "features": [
+    {
+      "id": "construction",
+      "contract": "Builder automatique, compte fixe ou layout; validation et démarrage",
+      "sources": [
+        "src/builder.rs",
+        "src/error.rs"
+      ],
+      "tests": [
+        {
+          "id": "src/builder.rs#count_transitions_preserve_names_and_allow_replacement",
+          "file": "src/builder.rs",
+          "name": "count_transitions_preserve_names_and_allow_replacement",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/builder.rs#planned_transitions_preserve_names_and_allow_replacement",
+          "file": "src/builder.rs",
+          "name": "planned_transitions_preserve_names_and_allow_replacement",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/pool.rs#accepts_all_confirmations_even_after_senders_are_dropped",
+          "file": "src/pool.rs",
+          "name": "accepts_all_confirmations_even_after_senders_are_dropped",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/pool.rs#propagates_affinity_failure_after_an_earlier_success",
+          "file": "src/pool.rs",
+          "name": "propagates_affinity_failure_after_an_earlier_success",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/build_errors.rs#affinity_errors_without_a_cause_describe_the_failure",
+          "file": "tests/build_errors.rs",
+          "name": "affinity_errors_without_a_cause_describe_the_failure",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/build_errors.rs#build_error_preserves_an_affinity_failure_without_an_os_cause",
+          "file": "tests/build_errors.rs",
+          "name": "build_error_preserves_an_affinity_failure_without_an_os_cause",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/build_errors.rs#build_error_preserves_worker_context_and_the_full_cause_chain",
+          "file": "tests/build_errors.rs",
+          "name": "build_error_preserves_worker_context_and_the_full_cause_chain",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#builder_options_are_independent_and_zero_is_rejected",
+          "file": "tests/pool.rs",
+          "name": "builder_options_are_independent_and_zero_is_rejected",
+          "ignored": false,
+          "linux_only": false
+        }
+      ],
+      "doctests": [
+        "src/builder.rs"
+      ],
+      "checks": [
+        null
+      ],
+      "platform": "all",
+      "limits": [
+        null
+      ]
+    },
+    {
+      "id": "pool",
+      "contract": "Soumission, handles, coopération, paniques, arrêt, isolation entre pools",
+      "sources": [
+        "src/pool.rs",
+        "src/handle.rs",
+        "src/job.rs"
+      ],
+      "tests": [
+        {
+          "id": "src/pool.rs#accepts_all_confirmations_even_after_senders_are_dropped",
+          "file": "src/pool.rs",
+          "name": "accepts_all_confirmations_even_after_senders_are_dropped",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/pool.rs#circular_plan_wraps_and_records_unknown_topology",
+          "file": "src/pool.rs",
+          "name": "circular_plan_wraps_and_records_unknown_topology",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/pool.rs#diagnostic_counts_include_submission_and_execution",
+          "file": "src/pool.rs",
+          "name": "diagnostic_counts_include_submission_and_execution",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/pool.rs#local_lifo_and_global_fifo_precede_stealing_at_equal_priority",
+          "file": "src/pool.rs",
+          "name": "local_lifo_and_global_fifo_precede_stealing_at_equal_priority",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/pool.rs#priority_precedes_queue_locality_and_victim_proximity",
+          "file": "src/pool.rs",
+          "name": "priority_precedes_queue_locality_and_victim_proximity",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/pool.rs#propagates_affinity_failure_after_an_earlier_success",
+          "file": "src/pool.rs",
+          "name": "propagates_affinity_failure_after_an_earlier_success",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/pool.rs#rejects_disconnection_when_a_confirmation_is_missing",
+          "file": "src/pool.rs",
+          "name": "rejects_disconnection_when_a_confirmation_is_missing",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/pool.rs#takes_sibling_then_local_node_then_remote_and_counts_only_transfers",
+          "file": "src/pool.rs",
+          "name": "takes_sibling_then_local_node_then_remote_and_counts_only_transfers",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/miri_core.rs#abandoned_handle_and_panic_release_owned_captures",
+          "file": "tests/miri_core.rs",
+          "name": "abandoned_handle_and_panic_release_owned_captures",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/miri_core.rs#nested_cross_pool_and_worker_local_borrows",
+          "file": "tests/miri_core.rs",
+          "name": "nested_cross_pool_and_worker_local_borrows",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/miri_core.rs#parallel_mutable_slices_and_ordered_search",
+          "file": "tests/miri_core.rs",
+          "name": "parallel_mutable_slices_and_ordered_search",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/miri_core.rs#scoped_borrows_descendants_panics_and_detached_handle",
+          "file": "tests/miri_core.rs",
+          "name": "scoped_borrows_descendants_panics_and_detached_handle",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#builder_options_are_independent_and_zero_is_rejected",
+          "file": "tests/pool.rs",
+          "name": "builder_options_are_independent_and_zero_is_rejected",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#concurrent_producers_execute_every_job_exactly_once",
+          "file": "tests/pool.rs",
+          "name": "concurrent_producers_execute_every_job_exactly_once",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#cross_pool_install_preserves_original_worker_context",
+          "file": "tests/pool.rs",
+          "name": "cross_pool_install_preserves_original_worker_context",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#every_worker_has_a_distinct_local_slot",
+          "file": "tests/pool.rs",
+          "name": "every_worker_has_a_distinct_local_slot",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#handles_report_results_panics_and_detach",
+          "file": "tests/pool.rs",
+          "name": "handles_report_results_panics_and_detach",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#idle_workers_wake_and_drop_drains_all_jobs",
+          "file": "tests/pool.rs",
+          "name": "idle_workers_wake_and_drop_drains_all_jobs",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#join_waits_for_borrowed_branch_when_other_panics",
+          "file": "tests/pool.rs",
+          "name": "join_waits_for_borrowed_branch_when_other_panics",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#nested_submit_join_and_install_work_on_one_worker",
+          "file": "tests/pool.rs",
+          "name": "nested_submit_join_and_install_work_on_one_worker",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#pool_can_be_dropped_by_its_last_worker_owner",
+          "file": "tests/pool.rs",
+          "name": "pool_can_be_dropped_by_its_last_worker_owner",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#priorities_select_queued_work_without_preemption",
+          "file": "tests/pool.rs",
+          "name": "priorities_select_queued_work_without_preemption",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#scope_borrows_returns_values_and_waits_for_descendants",
+          "file": "tests/pool.rs",
+          "name": "scope_borrows_returns_values_and_waits_for_descendants",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#scope_catches_panicking_result_destructors_without_hanging",
+          "file": "tests/pool.rs",
+          "name": "scope_catches_panicking_result_destructors_without_hanging",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#scope_waits_on_body_panic_and_propagates_task_panic",
+          "file": "tests/pool.rs",
+          "name": "scope_waits_on_body_panic_and_propagates_task_panic",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#scoped_submission_panics_are_observed_or_propagated",
+          "file": "tests/pool.rs",
+          "name": "scoped_submission_panics_are_observed_or_propagated",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#worker_local_is_pool_bound_and_detects_recursive_access",
+          "file": "tests/pool.rs",
+          "name": "worker_local_is_pool_bound_and_detects_recursive_access",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#worker_local_reports_poison_and_recovers_owned_values",
+          "file": "tests/pool.rs",
+          "name": "worker_local_reports_poison_and_recovers_owned_values",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#workers_really_steal_locally_spawned_jobs",
+          "file": "tests/pool.rs",
+          "name": "workers_really_steal_locally_spawned_jobs",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/safety_stress.rs#closures_and_results_drop_once_on_success_panic_and_detach",
+          "file": "tests/safety_stress.rs",
+          "name": "closures_and_results_drop_once_on_success_panic_and_detach",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/safety_stress.rs#external_producers_nest_across_single_worker_pools",
+          "file": "tests/safety_stress.rs",
+          "name": "external_producers_nest_across_single_worker_pools",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/safety_stress.rs#floating_reduction_can_differ_from_sequential_grouping",
+          "file": "tests/safety_stress.rs",
+          "name": "floating_reduction_can_differ_from_sequential_grouping",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/safety_stress.rs#ordered_results_and_search_do_not_promise_callback_order",
+          "file": "tests/safety_stress.rs",
+          "name": "ordered_results_and_search_do_not_promise_callback_order",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/safety_stress.rs#panicking_scope_drains_descendants_and_releases_captures",
+          "file": "tests/safety_stress.rs",
+          "name": "panicking_scope_drains_descendants_and_releases_captures",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/safety_stress.rs#seeded_external_wake_idle_and_shutdown_stress",
+          "file": "tests/safety_stress.rs",
+          "name": "seeded_external_wake_idle_and_shutdown_stress",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/safety_stress.rs#sustained_high_priority_starves_lower_queues_until_stream_stops",
+          "file": "tests/safety_stress.rs",
+          "name": "sustained_high_priority_starves_lower_queues_until_stream_stops",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/safety_stress.rs#worker_owned_shutdown_drains_children_and_releases_captures",
+          "file": "tests/safety_stress.rs",
+          "name": "worker_owned_shutdown_drains_children_and_releases_captures",
+          "ignored": false,
+          "linux_only": false
+        }
+      ],
+      "doctests": [
+        null
+      ],
+      "checks": [
+        null
+      ],
+      "platform": "all",
+      "limits": [
+        null
+      ]
+    },
+    {
+      "id": "scope",
+      "contract": "Emprunts et descendants terminés avant la sortie; propagation des paniques",
+      "sources": [
+        "src/scope.rs"
+      ],
+      "tests": [
+        {
+          "id": "src/scope.rs#caught_publication_failure_allows_more_scoped_work",
+          "file": "src/scope.rs",
+          "name": "caught_publication_failure_allows_more_scoped_work",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/scope.rs#panicking_capture_destructor_still_drains_scope",
+          "file": "src/scope.rs",
+          "name": "panicking_capture_destructor_still_drains_scope",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/scope.rs#rejected_join_drops_borrowed_branch_without_running_right",
+          "file": "src/scope.rs",
+          "name": "rejected_join_drops_borrowed_branch_without_running_right",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/scope.rs#rejected_scoped_submission_settles_ticket_and_drains_accepted_borrows",
+          "file": "src/scope.rs",
+          "name": "rejected_scoped_submission_settles_ticket_and_drains_accepted_borrows",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#scope_borrows_returns_values_and_waits_for_descendants",
+          "file": "tests/pool.rs",
+          "name": "scope_borrows_returns_values_and_waits_for_descendants",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#scope_catches_panicking_result_destructors_without_hanging",
+          "file": "tests/pool.rs",
+          "name": "scope_catches_panicking_result_destructors_without_hanging",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#scope_waits_on_body_panic_and_propagates_task_panic",
+          "file": "tests/pool.rs",
+          "name": "scope_waits_on_body_panic_and_propagates_task_panic",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#scoped_submission_panics_are_observed_or_propagated",
+          "file": "tests/pool.rs",
+          "name": "scoped_submission_panics_are_observed_or_propagated",
+          "ignored": false,
+          "linux_only": false
+        }
+      ],
+      "doctests": [
+        "src/scope.rs"
+      ],
+      "checks": [
+        null
+      ],
+      "platform": "all",
+      "limits": [
+        null
+      ]
+    },
+    {
+      "id": "worker-local",
+      "contract": "Valeur par worker, isolation du pool, réentrance, poison et récupération",
+      "sources": [
+        "src/storage/mod.rs",
+        "src/storage/local.rs",
+        "src/cache_padded.rs"
+      ],
+      "tests": [
+        {
+          "id": "tests/pool.rs#every_worker_has_a_distinct_local_slot",
+          "file": "tests/pool.rs",
+          "name": "every_worker_has_a_distinct_local_slot",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#worker_local_is_pool_bound_and_detects_recursive_access",
+          "file": "tests/pool.rs",
+          "name": "worker_local_is_pool_bound_and_detects_recursive_access",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#worker_local_reports_poison_and_recovers_owned_values",
+          "file": "tests/pool.rs",
+          "name": "worker_local_reports_poison_and_recovers_owned_values",
+          "ignored": false,
+          "linux_only": false
+        }
+      ],
+      "doctests": [
+        null
+      ],
+      "checks": [
+        null
+      ],
+      "platform": "all",
+      "limits": [
+        "CachePadded: utilisation indirecte; pas de test dédié d'alignement."
+      ]
+    },
+    {
+      "id": "layout",
+      "contract": "Un worker par CPU ou cœur, indices contigus et relations matérielles",
+      "sources": [
+        "src/layout.rs"
+      ],
+      "tests": [
+        {
+          "id": "src/layout.rs#one_per_logical_cpu_creates_contiguous_worker_indices",
+          "file": "src/layout.rs",
+          "name": "one_per_logical_cpu_creates_contiguous_worker_indices",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/layout.rs#one_per_logical_cpu_keeps_smt_siblings_as_distinct_workers",
+          "file": "src/layout.rs",
+          "name": "one_per_logical_cpu_keeps_smt_siblings_as_distinct_workers",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/layout.rs#one_per_logical_cpu_preserves_cpu_order_and_hardware_relations",
+          "file": "src/layout.rs",
+          "name": "one_per_logical_cpu_preserves_cpu_order_and_hardware_relations",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/layout.rs#one_per_physical_core_creates_contiguous_worker_indices",
+          "file": "src/layout.rs",
+          "name": "one_per_physical_core_creates_contiguous_worker_indices",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/layout.rs#one_per_physical_core_distinguishes_equal_core_numbers_across_packages",
+          "file": "src/layout.rs",
+          "name": "one_per_physical_core_distinguishes_equal_core_numbers_across_packages",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/layout.rs#one_per_physical_core_selects_the_first_cpu_of_each_core",
+          "file": "src/layout.rs",
+          "name": "one_per_physical_core_selects_the_first_cpu_of_each_core",
+          "ignored": false,
+          "linux_only": false
+        }
+      ],
+      "doctests": [
+        null
+      ],
+      "checks": [
+        null
+      ],
+      "platform": "all",
+      "limits": [
+        null
+      ]
+    },
+    {
+      "id": "stealing",
+      "contract": "Ordre circulaire ou cœur/NUMA/distant; priorité et compte des transferts",
+      "sources": [
+        "src/steal.rs"
+      ],
+      "tests": [
+        {
+          "id": "src/pool.rs#circular_plan_wraps_and_records_unknown_topology",
+          "file": "src/pool.rs",
+          "name": "circular_plan_wraps_and_records_unknown_topology",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/pool.rs#local_lifo_and_global_fifo_precede_stealing_at_equal_priority",
+          "file": "src/pool.rs",
+          "name": "local_lifo_and_global_fifo_precede_stealing_at_equal_priority",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/pool.rs#priority_precedes_queue_locality_and_victim_proximity",
+          "file": "src/pool.rs",
+          "name": "priority_precedes_queue_locality_and_victim_proximity",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/pool.rs#takes_sibling_then_local_node_then_remote_and_counts_only_transfers",
+          "file": "src/pool.rs",
+          "name": "takes_sibling_then_local_node_then_remote_and_counts_only_transfers",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/steal.rs#circular_starts_after_each_worker_and_wraps_around",
+          "file": "src/steal.rs",
+          "name": "circular_starts_after_each_worker_and_wraps_around",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/steal.rs#empty_and_single_worker_plans_have_no_victims",
+          "file": "src/steal.rs",
+          "name": "empty_and_single_worker_plans_have_no_victims",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/steal.rs#topology_aware_lists_every_other_worker_exactly_once",
+          "file": "src/steal.rs",
+          "name": "topology_aware_lists_every_other_worker_exactly_once",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "src/steal.rs#topology_aware_prioritizes_core_then_numa_then_remote_workers",
+          "file": "src/steal.rs",
+          "name": "topology_aware_prioritizes_core_then_numa_then_remote_workers",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#workers_really_steal_locally_spawned_jobs",
+          "file": "tests/pool.rs",
+          "name": "workers_really_steal_locally_spawned_jobs",
+          "ignored": false,
+          "linux_only": false
+        }
+      ],
+      "doctests": [
+        null
+      ],
+      "checks": [
+        null
+      ],
+      "platform": "all",
+      "limits": [
+        null
+      ]
+    },
+    {
+      "id": "affinity",
+      "contract": "Affinité Linux; erreurs et confirmation de chaque worker",
+      "sources": [
+        "src/affinity/mod.rs",
+        "src/affinity/linux.rs"
+      ],
+      "tests": [
+        {
+          "id": "src/affinity/linux.rs#builds_a_mask_containing_only_the_requested_cpu",
+          "file": "src/affinity/linux.rs",
+          "name": "builds_a_mask_containing_only_the_requested_cpu",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/affinity/linux.rs#pins_a_dedicated_thread_to_one_allowed_cpu",
+          "file": "src/affinity/linux.rs",
+          "name": "pins_a_dedicated_thread_to_one_allowed_cpu",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/affinity/linux.rs#rejects_a_cpu_outside_the_fixed_mask",
+          "file": "src/affinity/linux.rs",
+          "name": "rejects_a_cpu_outside_the_fixed_mask",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/pool.rs#propagates_affinity_failure_after_an_earlier_success",
+          "file": "src/pool.rs",
+          "name": "propagates_affinity_failure_after_an_earlier_success",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/affinity.rs#building_a_layout_pool_does_not_change_the_callers_affinity",
+          "file": "tests/affinity.rs",
+          "name": "building_a_layout_pool_does_not_change_the_callers_affinity",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "tests/affinity.rs#workers_run_on_the_cpus_selected_by_the_layout",
+          "file": "tests/affinity.rs",
+          "name": "workers_run_on_the_cpus_selected_by_the_layout",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "tests/build_errors.rs#affinity_errors_without_a_cause_describe_the_failure",
+          "file": "tests/build_errors.rs",
+          "name": "affinity_errors_without_a_cause_describe_the_failure",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/build_errors.rs#build_error_preserves_an_affinity_failure_without_an_os_cause",
+          "file": "tests/build_errors.rs",
+          "name": "build_error_preserves_an_affinity_failure_without_an_os_cause",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/build_errors.rs#build_error_preserves_worker_context_and_the_full_cause_chain",
+          "file": "tests/build_errors.rs",
+          "name": "build_error_preserves_worker_context_and_the_full_cause_chain",
+          "ignored": false,
+          "linux_only": false
+        }
+      ],
+      "doctests": [
+        null
+      ],
+      "checks": [
+        null
+      ],
+      "platform": "linux (réel), all (erreurs)",
+      "limits": [
+        "Les deux tests d'intégration reviennent sans assertion si le layout contient des CPU interdits; vérifier --nocapture."
+      ]
+    },
+    {
+      "id": "iterator-sources",
+      "contract": "Ranges usize, slices partagées/mutables, chunks et limites de découpage",
+      "sources": [
+        "src/iterator/range.rs",
+        "src/iterator/slice.rs",
+        "src/iterator/chunk_aligned.rs"
+      ],
+      "tests": [
+        {
+          "id": "tests/iterators.rs#chunks_keep_the_tail_and_split_in_chunk_units",
+          "file": "tests/iterators.rs",
+          "name": "chunks_keep_the_tail_and_split_in_chunk_units",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#empty_reversed_and_large_offset_ranges",
+          "file": "tests/iterators.rs",
+          "name": "empty_reversed_and_large_offset_ranges",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#operations_match_sequential_results_at_split_boundaries",
+          "file": "tests/iterators.rs",
+          "name": "operations_match_sequential_results_at_split_boundaries",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#slices_borrow_mutably_and_preserve_order",
+          "file": "tests/iterators.rs",
+          "name": "slices_borrow_mutably_and_preserve_order",
+          "ignored": false,
+          "linux_only": false
+        }
+      ],
+      "doctests": [
+        null
+      ],
+      "checks": [
+        null
+      ],
+      "platform": "all",
+      "limits": [
+        null
+      ]
+    },
+    {
+      "id": "iterator-adapters",
+      "contract": "Map paresseux, filter, filter_map et enumerate ordonnés",
+      "sources": [
+        "src/iterator/map.rs",
+        "src/iterator/filter.rs",
+        "src/iterator/filter_map.rs",
+        "src/iterator/enumerate.rs"
+      ],
+      "tests": [
+        {
+          "id": "tests/iterator_terminals.rs#enumerated_searches_stop_upstream_callbacks",
+          "file": "tests/iterator_terminals.rs",
+          "name": "enumerated_searches_stop_upstream_callbacks",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterator_terminals.rs#searches_cancel_remaining_work_inside_a_pool",
+          "file": "tests/iterator_terminals.rs",
+          "name": "searches_cancel_remaining_work_inside_a_pool",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterator_terminals.rs#searches_handle_filtered_order_empty_and_missing_matches",
+          "file": "tests/iterator_terminals.rs",
+          "name": "searches_handle_filtered_order_empty_and_missing_matches",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterator_terminals.rs#searches_move_non_sync_values_and_return_borrowed_items",
+          "file": "tests/iterator_terminals.rs",
+          "name": "searches_move_non_sync_values_and_return_borrowed_items",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterator_terminals.rs#searches_stop_upstream_callbacks_on_a_sequential_source",
+          "file": "tests/iterator_terminals.rs",
+          "name": "searches_stop_upstream_callbacks_on_a_sequential_source",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#chunks_keep_the_tail_and_split_in_chunk_units",
+          "file": "tests/iterators.rs",
+          "name": "chunks_keep_the_tail_and_split_in_chunk_units",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#empty_reversed_and_large_offset_ranges",
+          "file": "tests/iterators.rs",
+          "name": "empty_reversed_and_large_offset_ranges",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#enumerate_matches_the_sequential_iterator",
+          "file": "tests/iterators.rs",
+          "name": "enumerate_matches_the_sequential_iterator",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#fill_rejects_mismatch_before_running_mapper",
+          "file": "tests/iterators.rs",
+          "name": "fill_rejects_mismatch_before_running_mapper",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#filter_can_accept_every_element",
+          "file": "tests/iterators.rs",
+          "name": "filter_can_accept_every_element",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#filter_can_reject_every_element",
+          "file": "tests/iterators.rs",
+          "name": "filter_can_reject_every_element",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#filter_handles_empty_source",
+          "file": "tests/iterators.rs",
+          "name": "filter_handles_empty_source",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#filter_map",
+          "file": "tests/iterators.rs",
+          "name": "filter_map",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#filter_supports_a_predicate_capturing_a_non_copy_value",
+          "file": "tests/iterators.rs",
+          "name": "filter_supports_a_predicate_capturing_a_non_copy_value",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#fold_clones_only_at_splits_and_ordered_collection_is_stable",
+          "file": "tests/iterators.rs",
+          "name": "fold_clones_only_at_splits_and_ordered_collection_is_stable",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#iterator_panics_propagate_and_pool_remains_usable",
+          "file": "tests/iterators.rs",
+          "name": "iterator_panics_propagate_and_pool_remains_usable",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#map_is_lazy_and_supports_non_clone_items",
+          "file": "tests/iterators.rs",
+          "name": "map_is_lazy_and_supports_non_clone_items",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#operations_match_sequential_results_at_split_boundaries",
+          "file": "tests/iterators.rs",
+          "name": "operations_match_sequential_results_at_split_boundaries",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#parallel_filter_same_as_sequential",
+          "file": "tests/iterators.rs",
+          "name": "parallel_filter_same_as_sequential",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#slices_borrow_mutably_and_preserve_order",
+          "file": "tests/iterators.rs",
+          "name": "slices_borrow_mutably_and_preserve_order",
+          "ignored": false,
+          "linux_only": false
+        }
+      ],
+      "doctests": [
+        null
+      ],
+      "checks": [
+        null
+      ],
+      "platform": "all",
+      "limits": [
+        null
+      ]
+    },
+    {
+      "id": "iterator-terminals",
+      "contract": "Consumer/drive; for_each, fold/reduce, collect/fill, agrégats, recherche, extend",
+      "sources": [
+        "src/iterator/mod.rs",
+        "src/iterator/adaptator.rs"
+      ],
+      "tests": [
+        {
+          "id": "tests/iterator_terminals.rs#aggregates_match_sequential_at_split_boundaries",
+          "file": "tests/iterator_terminals.rs",
+          "name": "aggregates_match_sequential_at_split_boundaries",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterator_terminals.rs#count_evaluates_and_drops_owned_items",
+          "file": "tests/iterator_terminals.rs",
+          "name": "count_evaluates_and_drops_owned_items",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterator_terminals.rs#enumerated_searches_stop_upstream_callbacks",
+          "file": "tests/iterator_terminals.rs",
+          "name": "enumerated_searches_stop_upstream_callbacks",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterator_terminals.rs#extend_appends_owned_values_in_order_and_preserves_empty_destination",
+          "file": "tests/iterator_terminals.rs",
+          "name": "extend_appends_owned_values_in_order_and_preserves_empty_destination",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterator_terminals.rs#extrema_preserve_tie_semantics_without_clone",
+          "file": "tests/iterator_terminals.rs",
+          "name": "extrema_preserve_tie_semantics_without_clone",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterator_terminals.rs#find_first_keeps_searching_left_when_right_finishes_first",
+          "file": "tests/iterator_terminals.rs",
+          "name": "find_first_keeps_searching_left_when_right_finishes_first",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterator_terminals.rs#searches_cancel_remaining_work_inside_a_pool",
+          "file": "tests/iterator_terminals.rs",
+          "name": "searches_cancel_remaining_work_inside_a_pool",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterator_terminals.rs#searches_handle_filtered_order_empty_and_missing_matches",
+          "file": "tests/iterator_terminals.rs",
+          "name": "searches_handle_filtered_order_empty_and_missing_matches",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterator_terminals.rs#searches_move_non_sync_values_and_return_borrowed_items",
+          "file": "tests/iterator_terminals.rs",
+          "name": "searches_move_non_sync_values_and_return_borrowed_items",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterator_terminals.rs#searches_stop_upstream_callbacks_on_a_sequential_source",
+          "file": "tests/iterator_terminals.rs",
+          "name": "searches_stop_upstream_callbacks_on_a_sequential_source",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterator_terminals.rs#sum_supports_a_distinct_non_clone_accumulator",
+          "file": "tests/iterator_terminals.rs",
+          "name": "sum_supports_a_distinct_non_clone_accumulator",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterator_terminals.rs#terminal_panics_propagate_and_pool_recovers",
+          "file": "tests/iterator_terminals.rs",
+          "name": "terminal_panics_propagate_and_pool_recovers",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#fill_rejects_mismatch_before_running_mapper",
+          "file": "tests/iterators.rs",
+          "name": "fill_rejects_mismatch_before_running_mapper",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#fold_clones_only_at_splits_and_ordered_collection_is_stable",
+          "file": "tests/iterators.rs",
+          "name": "fold_clones_only_at_splits_and_ordered_collection_is_stable",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#iterator_panics_propagate_and_pool_remains_usable",
+          "file": "tests/iterators.rs",
+          "name": "iterator_panics_propagate_and_pool_remains_usable",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#operations_match_sequential_results_at_split_boundaries",
+          "file": "tests/iterators.rs",
+          "name": "operations_match_sequential_results_at_split_boundaries",
+          "ignored": false,
+          "linux_only": false
+        }
+      ],
+      "doctests": [
+        null
+      ],
+      "checks": [
+        null
+      ],
+      "platform": "all",
+      "limits": [
+        null
+      ]
+    },
+    {
+      "id": "topology",
+      "contract": "Identifiants CPU/cœur/package/NUMA, comptages et découverte sysfs validée",
+      "sources": [
+        "src/topology/mod.rs",
+        "src/topology/linux.rs"
+      ],
+      "tests": [
+        {
+          "id": "src/topology/linux.rs#builds_a_sorted_numa_layout_for_online_cpus",
+          "file": "src/topology/linux.rs",
+          "name": "builds_a_sorted_numa_layout_for_online_cpus",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#discovers_a_complete_topology_from_synthetic_sysfs",
+          "file": "src/topology/linux.rs",
+          "name": "discovers_a_complete_topology_from_synthetic_sysfs",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#discovers_a_synthetic_numa_node_when_node_online_is_absent",
+          "file": "src/topology/linux.rs",
+          "name": "discovers_a_synthetic_numa_node_when_node_online_is_absent",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#does_not_use_the_uma_fallback_for_other_node_online_errors",
+          "file": "src/topology/linux.rs",
+          "name": "does_not_use_the_uma_fallback_for_other_node_online_errors",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#ignores_offline_cpus_in_numa_memberships",
+          "file": "src/topology/linux.rs",
+          "name": "ignores_offline_cpus_in_numa_memberships",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#parses_an_inclusive_range",
+          "file": "src/topology/linux.rs",
+          "name": "parses_an_inclusive_range",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#parses_mixed_ids_ranges_and_trailing_newline",
+          "file": "src/topology/linux.rs",
+          "name": "parses_mixed_ids_ranges_and_trailing_newline",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#parses_non_contiguous_cpu_ids",
+          "file": "src/topology/linux.rs",
+          "name": "parses_non_contiguous_cpu_ids",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#parses_non_contiguous_numa_node_ids_and_ranges",
+          "file": "src/topology/linux.rs",
+          "name": "parses_non_contiguous_numa_node_ids_and_ranges",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#parses_one_cpu",
+          "file": "src/topology/linux.rs",
+          "name": "parses_one_cpu",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#reads_core_and_package_ids_for_a_cpu",
+          "file": "src/topology/linux.rs",
+          "name": "reads_core_and_package_ids_for_a_cpu",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#reads_cpus_belonging_to_a_numa_node",
+          "file": "src/topology/linux.rs",
+          "name": "reads_cpus_belonging_to_a_numa_node",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#reads_cpus_from_a_non_contiguous_numa_node_id",
+          "file": "src/topology/linux.rs",
+          "name": "reads_cpus_from_a_non_contiguous_numa_node_id",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#reads_online_cpus_from_a_sysfs_root",
+          "file": "src/topology/linux.rs",
+          "name": "reads_online_cpus_from_a_sysfs_root",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#reads_online_numa_nodes_from_a_sysfs_root",
+          "file": "src/topology/linux.rs",
+          "name": "reads_online_numa_nodes_from_a_sysfs_root",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#rejects_an_online_cpu_present_in_multiple_numa_nodes",
+          "file": "src/topology/linux.rs",
+          "name": "rejects_an_online_cpu_present_in_multiple_numa_nodes",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#rejects_an_online_cpu_without_a_numa_node",
+          "file": "src/topology/linux.rs",
+          "name": "rejects_an_online_cpu_without_a_numa_node",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#rejects_descending_ranges",
+          "file": "src/topology/linux.rs",
+          "name": "rejects_descending_ranges",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#rejects_duplicate_cpu_ids",
+          "file": "src/topology/linux.rs",
+          "name": "rejects_duplicate_cpu_ids",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#rejects_empty_input",
+          "file": "src/topology/linux.rs",
+          "name": "rejects_empty_input",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#rejects_empty_list_elements",
+          "file": "src/topology/linux.rs",
+          "name": "rejects_empty_list_elements",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#rejects_non_numeric_cpu_ids",
+          "file": "src/topology/linux.rs",
+          "name": "rejects_non_numeric_cpu_ids",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#rejects_ranges_with_too_many_bounds",
+          "file": "src/topology/linux.rs",
+          "name": "rejects_ranges_with_too_many_bounds",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#reports_a_missing_core_id_file",
+          "file": "src/topology/linux.rs",
+          "name": "reports_a_missing_core_id_file",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#reports_a_missing_numa_node_cpulist",
+          "file": "src/topology/linux.rs",
+          "name": "reports_a_missing_numa_node_cpulist",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#reports_a_missing_online_numa_nodes_file",
+          "file": "src/topology/linux.rs",
+          "name": "reports_a_missing_online_numa_nodes_file",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#reports_a_non_numeric_core_id",
+          "file": "src/topology/linux.rs",
+          "name": "reports_a_non_numeric_core_id",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#reports_an_invalid_numa_node_cpulist",
+          "file": "src/topology/linux.rs",
+          "name": "reports_an_invalid_numa_node_cpulist",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#returns_cpu_ids_in_ascending_order",
+          "file": "src/topology/linux.rs",
+          "name": "returns_cpu_ids_in_ascending_order",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/linux.rs#same_core_number_in_different_packages_identifies_different_cores",
+          "file": "src/topology/linux.rs",
+          "name": "same_core_number_in_different_packages_identifies_different_cores",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/topology/mod.rs#counts_distinguish_smt_cores_and_packages",
+          "file": "src/topology/mod.rs",
+          "name": "counts_distinguish_smt_cores_and_packages",
+          "ignored": false,
+          "linux_only": false
+        }
+      ],
+      "doctests": [
+        "src/topology/mod.rs"
+      ],
+      "checks": [
+        null
+      ],
+      "platform": "linux (découverte), all (représentation)",
+      "limits": [
+        null
+      ]
+    },
+    {
+      "id": "memory-errors",
+      "contract": "Erreurs mémoire et politique NUMA; source de l'erreur de réservation",
+      "sources": [
+        "src/memory/mod.rs"
+      ],
+      "tests": [
+        {
+          "id": "src/memory/linux.rs#rejected_node_leaves_policy_unchanged",
+          "file": "src/memory/linux.rs",
+          "name": "rejected_node_leaves_policy_unchanged",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/linux.rs#reservation_failure_converts_and_preserves_its_source",
+          "file": "src/memory/linux.rs",
+          "name": "reservation_failure_converts_and_preserves_its_source",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/linux.rs#sparse_nodes_are_validated_by_membership_not_count",
+          "file": "src/memory/linux.rs",
+          "name": "sparse_nodes_are_validated_by_membership_not_count",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/linux.rs#unknown_huge_node_is_rejected_before_mask_allocation",
+          "file": "src/memory/linux.rs",
+          "name": "unknown_huge_node_is_rejected_before_mask_allocation",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/linux.rs#unrepresentable_max_node_is_rejected_without_allocation",
+          "file": "src/memory/linux.rs",
+          "name": "unrepresentable_max_node_is_rejected_without_allocation",
+          "ignored": false,
+          "linux_only": true
+        }
+      ],
+      "doctests": [
+        null
+      ],
+      "checks": [
+        null
+      ],
+      "platform": "linux (tests existants)",
+      "limits": [
+        "Display et chaînes source OS/Topology ne disposent pas de tests dédiés."
+      ]
+    },
+    {
+      "id": "mapping",
+      "contract": "Mapping typé, capacité, alignement, limites de taille, masques NUMA et munmap",
+      "sources": [
+        "src/memory/linux.rs"
+      ],
+      "tests": [
+        {
+          "id": "src/memory/linux.rs#drop_unmaps_every_page_in_an_isolated_process",
+          "file": "src/memory/linux.rs",
+          "name": "drop_unmaps_every_page_in_an_isolated_process",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/linux.rs#mappings_are_independent_and_dropping_one_preserves_the_other",
+          "file": "src/memory/linux.rs",
+          "name": "mappings_are_independent_and_dropping_one_preserves_the_other",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/linux.rs#mask_sets_exactly_one_bit_across_word_boundaries",
+          "file": "src/memory/linux.rs",
+          "name": "mask_sets_exactly_one_bit_across_word_boundaries",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/linux.rs#non_page_multiple_mapping_preserves_bytes_across_page_boundaries",
+          "file": "src/memory/linux.rs",
+          "name": "non_page_multiple_mapping_preserves_bytes_across_page_boundaries",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/linux.rs#one_byte_mapping_is_zero_initialized_and_writable",
+          "file": "src/memory/linux.rs",
+          "name": "one_byte_mapping_is_zero_initialized_and_writable",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/linux.rs#rejected_node_leaves_policy_unchanged",
+          "file": "src/memory/linux.rs",
+          "name": "rejected_node_leaves_policy_unchanged",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/linux.rs#rejects_overflow_and_sizes_above_the_pointer_limit",
+          "file": "src/memory/linux.rs",
+          "name": "rejects_overflow_and_sizes_above_the_pointer_limit",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/linux.rs#rejects_zero_length",
+          "file": "src/memory/linux.rs",
+          "name": "rejects_zero_length",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/linux.rs#rejects_zero_sized_types_under_the_current_contract",
+          "file": "src/memory/linux.rs",
+          "name": "rejects_zero_sized_types_under_the_current_contract",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/linux.rs#reservation_failure_converts_and_preserves_its_source",
+          "file": "src/memory/linux.rs",
+          "name": "reservation_failure_converts_and_preserves_its_source",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/linux.rs#sparse_nodes_are_validated_by_membership_not_count",
+          "file": "src/memory/linux.rs",
+          "name": "sparse_nodes_are_validated_by_membership_not_count",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/linux.rs#strongly_aligned_storage_has_room_for_the_last_element",
+          "file": "src/memory/linux.rs",
+          "name": "strongly_aligned_storage_has_room_for_the_last_element",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/linux.rs#typed_capacity_is_in_elements_and_every_slot_is_writable",
+          "file": "src/memory/linux.rs",
+          "name": "typed_capacity_is_in_elements_and_every_slot_is_writable",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/linux.rs#unknown_huge_node_is_rejected_before_mask_allocation",
+          "file": "src/memory/linux.rs",
+          "name": "unknown_huge_node_is_rejected_before_mask_allocation",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/linux.rs#unrepresentable_max_node_is_rejected_without_allocation",
+          "file": "src/memory/linux.rs",
+          "name": "unrepresentable_max_node_is_rejected_without_allocation",
+          "ignored": false,
+          "linux_only": true
+        }
+      ],
+      "doctests": [
+        null
+      ],
+      "checks": [
+        null
+      ],
+      "platform": "linux",
+      "limits": [
+        null
+      ]
+    },
+    {
+      "id": "numa-buffer",
+      "contract": "Préfixe initialisé, push fixe, slices, Default et destruction sous politique acceptée",
+      "sources": [
+        "src/memory/buffer.rs"
+      ],
+      "tests": [
+        {
+          "id": "src/memory/buffer.rs#buffers_are_independent_and_dropping_one_preserves_the_other",
+          "file": "src/memory/buffer.rs",
+          "name": "buffers_are_independent_and_dropping_one_preserves_the_other",
+          "ignored": true,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/buffer.rs#default_panic_drops_exactly_the_initialized_prefix",
+          "file": "src/memory/buffer.rs",
+          "name": "default_panic_drops_exactly_the_initialized_prefix",
+          "ignored": true,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/buffer.rs#drop_destroys_only_initialized_elements_and_preserves_rejected_values",
+          "file": "src/memory/buffer.rs",
+          "name": "drop_destroys_only_initialized_elements_and_preserves_rejected_values",
+          "ignored": true,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/buffer.rs#invalid_new_sizes_do_not_call_default",
+          "file": "src/memory/buffer.rs",
+          "name": "invalid_new_sizes_do_not_call_default",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/buffer.rs#new_constructs_each_default_and_drops_every_element_once",
+          "file": "src/memory/buffer.rs",
+          "name": "new_constructs_each_default_and_drops_every_element_once",
+          "ignored": true,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/buffer.rs#rejects_a_node_absent_from_the_machine",
+          "file": "src/memory/buffer.rs",
+          "name": "rejects_a_node_absent_from_the_machine",
+          "ignored": true,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/buffer.rs#rejects_lengths_above_the_slice_limit_before_allocation",
+          "file": "src/memory/buffer.rs",
+          "name": "rejects_lengths_above_the_slice_limit_before_allocation",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/buffer.rs#rejects_zero_length_before_discovery",
+          "file": "src/memory/buffer.rs",
+          "name": "rejects_zero_length_before_discovery",
+          "ignored": false,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/buffer.rs#reserved_buffer_starts_empty_and_returns_rejected_value_when_full",
+          "file": "src/memory/buffer.rs",
+          "name": "reserved_buffer_starts_empty_and_returns_rejected_value_when_full",
+          "ignored": true,
+          "linux_only": true
+        },
+        {
+          "id": "src/memory/buffer.rs#slices_cover_the_requested_length_across_page_boundaries",
+          "file": "src/memory/buffer.rs",
+          "name": "slices_cover_the_requested_length_across_page_boundaries",
+          "ignored": true,
+          "linux_only": true
+        }
+      ],
+      "doctests": [
+        "src/memory/buffer.rs"
+      ],
+      "checks": [
+        null
+      ],
+      "platform": "linux",
+      "limits": [
+        "Sept tests ignorés par défaut, dont six exigent mbind; aucune preuve de résidence physique des pages."
+      ]
+    },
+    {
+      "id": "public-api",
+      "contract": "Exports publics et documentation",
+      "sources": [
+        "src/lib.rs"
+      ],
+      "tests": [
+        {
+          "id": "tests/build_errors.rs#affinity_errors_without_a_cause_describe_the_failure",
+          "file": "tests/build_errors.rs",
+          "name": "affinity_errors_without_a_cause_describe_the_failure",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/build_errors.rs#build_error_preserves_an_affinity_failure_without_an_os_cause",
+          "file": "tests/build_errors.rs",
+          "name": "build_error_preserves_an_affinity_failure_without_an_os_cause",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/build_errors.rs#build_error_preserves_worker_context_and_the_full_cause_chain",
+          "file": "tests/build_errors.rs",
+          "name": "build_error_preserves_worker_context_and_the_full_cause_chain",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#chunks_keep_the_tail_and_split_in_chunk_units",
+          "file": "tests/iterators.rs",
+          "name": "chunks_keep_the_tail_and_split_in_chunk_units",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#empty_reversed_and_large_offset_ranges",
+          "file": "tests/iterators.rs",
+          "name": "empty_reversed_and_large_offset_ranges",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#enumerate_matches_the_sequential_iterator",
+          "file": "tests/iterators.rs",
+          "name": "enumerate_matches_the_sequential_iterator",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#fill_rejects_mismatch_before_running_mapper",
+          "file": "tests/iterators.rs",
+          "name": "fill_rejects_mismatch_before_running_mapper",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#filter_can_accept_every_element",
+          "file": "tests/iterators.rs",
+          "name": "filter_can_accept_every_element",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#filter_can_reject_every_element",
+          "file": "tests/iterators.rs",
+          "name": "filter_can_reject_every_element",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#filter_handles_empty_source",
+          "file": "tests/iterators.rs",
+          "name": "filter_handles_empty_source",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#filter_map",
+          "file": "tests/iterators.rs",
+          "name": "filter_map",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#filter_supports_a_predicate_capturing_a_non_copy_value",
+          "file": "tests/iterators.rs",
+          "name": "filter_supports_a_predicate_capturing_a_non_copy_value",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#fold_clones_only_at_splits_and_ordered_collection_is_stable",
+          "file": "tests/iterators.rs",
+          "name": "fold_clones_only_at_splits_and_ordered_collection_is_stable",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#iterator_panics_propagate_and_pool_remains_usable",
+          "file": "tests/iterators.rs",
+          "name": "iterator_panics_propagate_and_pool_remains_usable",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#map_is_lazy_and_supports_non_clone_items",
+          "file": "tests/iterators.rs",
+          "name": "map_is_lazy_and_supports_non_clone_items",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#operations_match_sequential_results_at_split_boundaries",
+          "file": "tests/iterators.rs",
+          "name": "operations_match_sequential_results_at_split_boundaries",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#parallel_filter_same_as_sequential",
+          "file": "tests/iterators.rs",
+          "name": "parallel_filter_same_as_sequential",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/iterators.rs#slices_borrow_mutably_and_preserve_order",
+          "file": "tests/iterators.rs",
+          "name": "slices_borrow_mutably_and_preserve_order",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#builder_options_are_independent_and_zero_is_rejected",
+          "file": "tests/pool.rs",
+          "name": "builder_options_are_independent_and_zero_is_rejected",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#concurrent_producers_execute_every_job_exactly_once",
+          "file": "tests/pool.rs",
+          "name": "concurrent_producers_execute_every_job_exactly_once",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#cross_pool_install_preserves_original_worker_context",
+          "file": "tests/pool.rs",
+          "name": "cross_pool_install_preserves_original_worker_context",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#every_worker_has_a_distinct_local_slot",
+          "file": "tests/pool.rs",
+          "name": "every_worker_has_a_distinct_local_slot",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#handles_report_results_panics_and_detach",
+          "file": "tests/pool.rs",
+          "name": "handles_report_results_panics_and_detach",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#idle_workers_wake_and_drop_drains_all_jobs",
+          "file": "tests/pool.rs",
+          "name": "idle_workers_wake_and_drop_drains_all_jobs",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#join_waits_for_borrowed_branch_when_other_panics",
+          "file": "tests/pool.rs",
+          "name": "join_waits_for_borrowed_branch_when_other_panics",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#nested_submit_join_and_install_work_on_one_worker",
+          "file": "tests/pool.rs",
+          "name": "nested_submit_join_and_install_work_on_one_worker",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#pool_can_be_dropped_by_its_last_worker_owner",
+          "file": "tests/pool.rs",
+          "name": "pool_can_be_dropped_by_its_last_worker_owner",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#priorities_select_queued_work_without_preemption",
+          "file": "tests/pool.rs",
+          "name": "priorities_select_queued_work_without_preemption",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#scope_borrows_returns_values_and_waits_for_descendants",
+          "file": "tests/pool.rs",
+          "name": "scope_borrows_returns_values_and_waits_for_descendants",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#scope_catches_panicking_result_destructors_without_hanging",
+          "file": "tests/pool.rs",
+          "name": "scope_catches_panicking_result_destructors_without_hanging",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#scope_waits_on_body_panic_and_propagates_task_panic",
+          "file": "tests/pool.rs",
+          "name": "scope_waits_on_body_panic_and_propagates_task_panic",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#scoped_submission_panics_are_observed_or_propagated",
+          "file": "tests/pool.rs",
+          "name": "scoped_submission_panics_are_observed_or_propagated",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#worker_local_is_pool_bound_and_detects_recursive_access",
+          "file": "tests/pool.rs",
+          "name": "worker_local_is_pool_bound_and_detects_recursive_access",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#worker_local_reports_poison_and_recovers_owned_values",
+          "file": "tests/pool.rs",
+          "name": "worker_local_reports_poison_and_recovers_owned_values",
+          "ignored": false,
+          "linux_only": false
+        },
+        {
+          "id": "tests/pool.rs#workers_really_steal_locally_spawned_jobs",
+          "file": "tests/pool.rs",
+          "name": "workers_really_steal_locally_spawned_jobs",
+          "ignored": false,
+          "linux_only": false
+        }
+      ],
+      "doctests": [
+        null
+      ],
+      "checks": [
+        "cargo rustdoc --locked --lib -- -D warnings -D missing-docs",
+        "cargo test --locked --doc"
+      ],
+      "platform": "all",
+      "limits": [
+        null
+      ]
+    },
+    {
+      "id": "examples",
+      "contract": "Compilation des trois exemples et assertions de tour",
+      "sources": [
+        "examples/tour.rs",
+        "examples/topology.rs",
+        "examples/layout.rs"
+      ],
+      "tests": [],
+      "doctests": [
+        null
+      ],
+      "checks": [
+        "cargo test --locked --all-targets",
+        "cargo run --locked --example tour",
+        "cargo run --locked --example topology (Linux)",
+        "cargo run --locked --example layout (Linux, CPUs du layout autorisés)"
+      ],
+      "platform": "all (compilation/tour), linux (topology/layout)",
+      "limits": [
+        null
+      ]
+    },
+    {
+      "id": "mesure-initiale",
+      "contract": "Comparaison Weave/Rayon/séquentiel, métriques isolées et checksums",
+      "sources": [
+        "benchmarks/src/main.rs"
+      ],
+      "tests": [],
+      "doctests": [
+        null
+      ],
+      "checks": [
+        "python3 benchmarks/run.py --workers 1,2,4,8 --samples 9"
+      ],
+      "platform": "linux (runner)",
+      "limits": [
+        "Hardware avancé et API futures explicitement différés."
+      ]
+    }
+  ]
+}

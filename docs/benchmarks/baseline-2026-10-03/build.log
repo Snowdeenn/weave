@@ -1,0 +1,16 @@
+Compiling crossbeam-utils v0.8.21
+   Compiling rayon-core v1.13.0
+   Compiling libc v0.2.189
+   Compiling either v1.16.0
+   Compiling crossbeam-epoch v0.9.18
+   Compiling crossbeam-deque v0.8.6
+   Compiling weave v0.1.0 (/mnt/d/projects/weave)
+   Compiling rayon v1.12.0
+   Compiling weave-baseline v0.1.0 (/mnt/d/projects/weave/benchmarks)
+    Finished `release` profile [optimized] target(s) in 5.82s
+Finished `release` profile [optimized] target(s) in 0.12s
+Compiling weave-baseline v0.1.0 (/mnt/d/projects/weave/benchmarks)
+    Finished `release` profile [optimized] target(s) in 1.31s
+Compiling weave v0.1.0 (/mnt/d/projects/weave)
+   Compiling weave-baseline v0.1.0 (/mnt/d/projects/weave/benchmarks)
+    Finished `release` profile [optimized] target(s) in 2.34s

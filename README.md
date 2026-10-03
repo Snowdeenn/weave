@@ -3,7 +3,7 @@
 Une bibliothèque Rust de calcul parallèle : pool de threads, véritable vol de tâches
 entre workers, priorités, tâches empruntant des données, itérateurs parallèles et
 description de la topologie matérielle. Elle utilise uniquement la bibliothèque
-standard.
+standard et libc pour les interfaces Linux.
 
 ## Démarrage
 
@@ -19,8 +19,8 @@ let ticket = pool.submit(|| 6 * 7);
 assert_eq!(ticket.join().unwrap(), 42);
 ```
 
-Lancer la démonstration complète : `cargo run --example tour`. Sous Linux,
-`cargo run --example topology` affiche les CPU logiques, cœurs physiques,
+Lancer la démonstration complète : `cargo run --locked --example tour`. Sous Linux,
+`cargo run --locked --example topology` affiche les CPU logiques, cœurs physiques,
 packages et nœuds NUMA découverts.
 Le [rapport de réalisation](docs/RAPPORT_REALISATION.md) explique le projet
 pour un lecteur non spécialiste et propose un déroulé de présentation.
@@ -96,9 +96,9 @@ uniforme par un nœud synthétique d'identifiant zéro. Sur les autres plateform
 
 Cette API décrit passivement les relations entre CPU logiques, cœurs physiques,
 packages et nœuds NUMA. Elle ne choisit pas le nombre de workers, ne fixe pas leur
-affinité, ne place pas la mémoire et ne modifie pas encore la politique de vol de
-tâches. Elle constitue la couche de découverte nécessaire à une future
-ordonnance topology-aware.
+affinité, ne place pas la mémoire et ne modifie pas directement la politique de vol de
+tâches. WorkerLayout exploite cette description pour configurer une
+ordonnance tenant compte de la topologie : construction avec affinité Linux, puis vol entre workers du même cœur, du même nœud NUMA et des nœuds distants. Les compteurs steal_stats décrivent les transferts réussis.
 
 ## Stockage par worker
 
@@ -148,33 +148,41 @@ synchronisation centralisée : aucune prétention à égaler les performances de
 
 Le seuil de découpage est de 512 éléments. Le vol est mesurable avec
 `pool.steal_count()`. Il n'existe pas encore de benchmark comparatif, de
-garantie de temps réel, d'annulation, de pool redimensionnable, d'affinité CPU
-ou de politique de vol utilisant la topologie découverte.
+garantie de temps réel, d'annulation générale ni de pool redimensionnable.
+Les pools construits avec un WorkerLayout appliquent une affinité CPU Linux et une politique de vol utilisant la topologie découverte.
 Deux effacements internes de durée de vie restent nécessaires aux tâches
 empruntées ; leurs invariants sont commentés et testés, sans constituer une
 preuve formelle de sûreté mémoire.
+
+Les [invariants du scheduler](docs/SCHEDULER_INVARIANTS.md) précisent la propriété des jobs, leur publication, l'exécution au plus une fois et les conditions d'achèvement des tâches acceptées, avec les tests associés.
+
+## Mémoire NUMA sous Linux
+
+`weave::memory::buffer::NumaBuffer<T>` réserve une capacité fixe et applique une politique `NumaPolicy::Bind` avant initialisation. `try_push` restitue la valeur si le buffer est plein ; seules les valeurs initialisées sont exposées et détruites. Le type rejette les capacités nulles et les types de taille nulle, et ne fournit pas Send/Sync. La politique acceptée ne prouve pas la résidence physique des pages. La découverte NUMA et le syscall mbind doivent être disponibles ; aucun repli silencieux n'est effectué.
 
 ## Vérification
 
 ```text
 cargo fmt --all -- --check
-cargo clippy --all-targets -- -D warnings
-cargo test --all-targets
-cargo test --doc
-cargo test --release
-cargo rustdoc --lib -- -D warnings -D missing-docs
-cargo run --example tour
+cargo clippy --locked --all-targets -- -D warnings
+cargo test --locked --all-targets
+cargo test --locked --doc
+cargo test --locked --release
+cargo rustdoc --locked --lib -- -D warnings -D missing-docs
+cargo run --locked --example tour
 # Linux uniquement :
-cargo run --example topology
+cargo run --locked --example topology
 ```
 
 La CI est configurée pour Windows et Linux. L'exemple `topology` compile sur
 toutes les plateformes, mais sa découverte réelle ne réussit actuellement que
 sous Linux.
 
+La [vérification du socle](docs/verification/README.md) fixe la révision auditée et détaille les limites. La [matrice fonctionnalités/tests](docs/verification/features.json) est contrôlée par `pwsh -NoProfile -File docs/verification/verify.ps1`. Les sept tests NUMA ignorés exigent une exécution explicite sur un hôte adapté.
+
 ## Migration du prototype
 
-`ThreadPoolBuidler` reste un alias déprécié de `ThreadPoolBuilder`.
+`ThreadPoolBuidler` a été retiré ; utiliser `ThreadPoolBuilder`.
 `num_thread`, `spawn_job` et `parallelize` restent disponibles.
 `JoinHandle::join` renvoie désormais un `Result` au lieu d'une valeur brute.
 `WorkerLocal::new` reçoit le pool propriétaire plutôt qu'un nombre.
@@ -187,3 +195,5 @@ Les éléments publics sans fonction effective (`Worker`, `JobState`,
 
 Le dépôt ne déclare pas encore de licence de distribution. Le choix de cette
 licence reste à faire par le propriétaire avant une publication.
+
+L'[audit de phase 0](docs/verification/phase0/README.md) détaille les durées de vie, les rejets de publication, Miri, le stress et les exclusions. La [suite comparative](benchmarks/run.py) conserve ses résultats et sources de référence dans `docs/benchmarks`.
