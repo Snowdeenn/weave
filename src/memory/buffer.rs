@@ -1,6 +1,9 @@
-//! Fixed-capacity, owned NUMA buffers for Linux.
+//! Fixed-capacity, owned NUMA buffers for Linux and Windows.
 
+#[cfg(target_os = "linux")]
 use super::linux::MappedRegion;
+#[cfg(target_os = "windows")]
+use super::windows::MappedRegion;
 use super::{MemoryError, NumaPolicy};
 
 /// A fixed-capacity allocation containing a prefix of initialized `T` values.
@@ -24,7 +27,7 @@ use super::{MemoryError, NumaPolicy};
 ///
 /// # fn example() -> Result<(), MemoryError> {
 /// // Choose an online memory node allowed for this thread; node 0 is an example.
-/// let policy = NumaPolicy::Bind(NumaNodeId::new(0));
+/// let policy = NumaPolicy::Prefer(NumaNodeId::new(0));
 /// let mut buffer = NumaBuffer::<u64>::try_with_capacity(2, policy)?;
 /// assert!(buffer.is_empty());
 /// assert!(buffer.try_push(42).is_ok());
@@ -86,8 +89,9 @@ impl<T> NumaBuffer<T> {
     /// # Errors
     /// Rejects zero capacity, zero-sized types, arithmetic overflow and mapping
     /// sizes above isize::MAX (including alignment padding). Also propagates
-    /// sysfs discovery, mask allocation, alignment and Linux syscall failures.
-    /// There is no silent fallback when Linux rejects the requested policy.
+    /// topology discovery, alignment and operating-system allocation failures.
+    /// Linux supports Bind and Prefer. Windows supports Prefer and explicitly
+    /// rejects Bind: VirtualAllocExNuma may fall back to another node.
     ///
     /// A successful mapping is not a guarantee of available physical memory:
     /// failures when pages are later touched may terminate the process instead
@@ -97,11 +101,21 @@ impl<T> NumaBuffer<T> {
             return Err(MemoryError::InvalidSize);
         }
 
-        let sysfs_root = std::path::Path::new("/sys/devices/system");
-
-        let known_nodes = crate::topology::linux::read_online_numa_nodes(sysfs_root)?;
-        let mut region = MappedRegion::<T>::try_allocate(capacity)?;
-        region.set_numa_policy(policy, known_nodes.as_slice())?;
+        #[cfg(target_os = "linux")]
+        let region = {
+            let sysfs_root = std::path::Path::new("/sys/devices/system");
+            let known_nodes = crate::topology::linux::read_online_numa_nodes(sysfs_root)?;
+            let mut region = MappedRegion::<T>::try_allocate(capacity)?;
+            region.set_numa_policy(policy, known_nodes.as_slice())?;
+            region
+        };
+        #[cfg(target_os = "windows")]
+        let region = {
+            // Validate layout and unsupported policies before querying Windows.
+            MappedRegion::<T>::validate_request(capacity, policy)?;
+            let known_nodes = super::windows::read_memory_nodes()?;
+            MappedRegion::<T>::try_allocate(capacity, policy, &known_nodes)?
+        };
         Ok(NumaBuffer { region, len: 0 })
     }
 
@@ -197,7 +211,8 @@ impl<T> Drop for NumaBuffer<T> {
 // Il a aussi la propriété exclusif du mapping, ce qui veut dire que déplacer le buffer
 // effectue juste un transfère de propriété sans déplacer et invalider la mémoire (le pointeur).
 // Et enfin le mapping n'est pas liée au thread créateur, une libération par `munmap` peut ce faire
-// depuis n'importe quel thread.
+// depuis n'importe quel thread. Sur Windows, VirtualFreeEx libère de même
+// le stockage du processus courant indépendamment du thread créateur.
 unsafe impl<T: Send> Send for NumaBuffer<T> {}
 
 // SAFETY: Un &NumaBuffer<T> expose les éléments initialisés uniquement
@@ -276,7 +291,10 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires Linux NUMA discovery and an allowed mbind syscall"]
+    #[cfg_attr(
+        target_os = "linux",
+        ignore = "requires Linux NUMA discovery and an allowed mbind syscall"
+    )]
     fn new_constructs_each_default_and_drops_every_element_once() {
         reset_probe(usize::MAX);
         let policy = allowed_policy();
@@ -299,7 +317,10 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires Linux NUMA discovery and an allowed mbind syscall"]
+    #[cfg_attr(
+        target_os = "linux",
+        ignore = "requires Linux NUMA discovery and an allowed mbind syscall"
+    )]
     fn default_panic_drops_exactly_the_initialized_prefix() {
         let policy = allowed_policy();
         for panic_at in [0, 1, 3] {
@@ -344,8 +365,10 @@ mod tests {
     // The following tests exercise the real constructor, not a fabricated
     // buffer that bypasses its policy invariant. Run explicitly with:
     // cargo test --lib memory::buffer::tests -- --ignored
-    // They require sysfs, procfs and permission to call mbind. A denied syscall
+    // On Linux they require sysfs, procfs and permission to call mbind; on
+    // Windows they run normally with the native preference allocator. A denied syscall
     // fails the test rather than being silently counted as a successful test.
+    #[cfg(target_os = "linux")]
     fn allowed_policy() -> NumaPolicy {
         // Use memory permissions of the calling thread, not CPU affinity or an
         // assumption that node 0 is allowed. The first list item may be a range.
@@ -365,8 +388,39 @@ mod tests {
         NumaPolicy::Bind(NumaNodeId::new(node))
     }
 
+    #[cfg(target_os = "windows")]
+    fn allowed_policy() -> NumaPolicy {
+        let nodes = super::super::windows::read_memory_nodes()
+            .expect("cannot discover Windows memory nodes");
+        NumaPolicy::Prefer(nodes[0])
+    }
+
+    #[cfg(target_os = "windows")]
     #[test]
-    #[ignore = "requires Linux NUMA discovery and an allowed mbind syscall"]
+    fn windows_buffers_can_move_and_be_shared_between_threads() {
+        let mut buffer = NumaBuffer::<String>::try_with_capacity(2, allowed_policy()).unwrap();
+        buffer.try_push(String::from("NUMA storage")).unwrap();
+        let buffer = std::thread::spawn(move || {
+            assert_eq!(buffer.as_slice(), &["NUMA storage"]);
+            buffer.try_push(String::from("another thread")).unwrap();
+            buffer
+        })
+        .join()
+        .unwrap();
+        std::thread::scope(|scope| {
+            let first = scope.spawn(|| buffer.as_slice()[0].len());
+            let second = scope.spawn(|| buffer.as_slice()[1].len());
+            assert_eq!(first.join().unwrap(), 12);
+            assert_eq!(second.join().unwrap(), 14);
+        });
+        // Destruction occurs here, on a different thread from the last writer.
+    }
+
+    #[test]
+    #[cfg_attr(
+        target_os = "linux",
+        ignore = "requires Linux NUMA discovery and an allowed mbind syscall"
+    )]
     fn reserved_buffer_starts_empty_and_returns_rejected_value_when_full() {
         let policy = allowed_policy();
         let mut buffer =
@@ -387,10 +441,21 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires Linux NUMA discovery and an allowed mbind syscall"]
+    #[cfg_attr(
+        target_os = "linux",
+        ignore = "requires Linux NUMA discovery and an allowed mbind syscall"
+    )]
     fn slices_cover_the_requested_length_across_page_boundaries() {
+        #[cfg(target_os = "linux")]
         // SAFETY: sysconf takes a constant selector and no pointers.
         let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
+        #[cfg(target_os = "windows")]
+        let page_size = {
+            let mut system = windows_sys::Win32::System::SystemInformation::SYSTEM_INFO::default();
+            // SAFETY: system is writable and lives throughout the call.
+            unsafe { windows_sys::Win32::System::SystemInformation::GetSystemInfo(&mut system) };
+            system.dwPageSize
+        };
         assert!(page_size > 0);
         let size = 2 * page_size as usize + 17;
         let policy = allowed_policy();
@@ -419,7 +484,10 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires Linux NUMA discovery and an allowed mbind syscall"]
+    #[cfg_attr(
+        target_os = "linux",
+        ignore = "requires Linux NUMA discovery and an allowed mbind syscall"
+    )]
     fn buffers_are_independent_and_dropping_one_preserves_the_other() {
         let policy = allowed_policy();
         let mut first =
@@ -441,17 +509,20 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires Linux NUMA sysfs discovery"]
+    #[cfg_attr(target_os = "linux", ignore = "requires Linux NUMA sysfs discovery")]
     fn rejects_a_node_absent_from_the_machine() {
         let node = NumaNodeId::new(usize::MAX);
         assert!(matches!(
-            NumaBuffer::<u8>::try_with_capacity(1, NumaPolicy::Bind(node)),
+            NumaBuffer::<u8>::try_with_capacity(1, NumaPolicy::Prefer(node)),
             Err(MemoryError::UnknownNode(rejected)) if rejected == node
         ));
     }
 
     #[test]
-    #[ignore = "requires Linux NUMA discovery and an allowed mbind syscall"]
+    #[cfg_attr(
+        target_os = "linux",
+        ignore = "requires Linux NUMA discovery and an allowed mbind syscall"
+    )]
     fn drop_destroys_only_initialized_elements_and_preserves_rejected_values() {
         use std::cell::Cell;
         use std::rc::Rc;

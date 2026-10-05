@@ -7,7 +7,10 @@ use crate::topology::{NumaNodeId, TopologyError};
 #[cfg(all(target_os = "linux", not(miri)))]
 pub mod linux;
 
-#[cfg(all(target_os = "linux", not(miri)))]
+#[cfg(all(target_os = "windows", not(miri)))]
+pub mod windows;
+
+#[cfg(all(any(target_os = "linux", target_os = "windows"), not(miri)))]
 pub mod buffer;
 /// Failure to allocate memory or configure its NUMA policy.
 #[derive(Debug)]
@@ -16,9 +19,9 @@ pub enum MemoryError {
     InvalidSize,
     /// The requested node is absent from the supplied node set.
     UnknownNode(NumaNodeId),
-    /// The node identifier cannot be represented by the Linux mask interface.
+    /// The node identifier cannot be represented by the platform NUMA interface.
     InvalidNodeId(NumaNodeId),
-    /// A Linux operation failed; the original OS error is preserved.
+    /// An operating-system operation failed; the original OS error is preserved.
     Os(std::io::Error),
     /// Reserving the mask failed, including capacity overflow.
     Allocation(TryReserveError),
@@ -26,6 +29,8 @@ pub enum MemoryError {
     Topology(TopologyError),
     /// The alignement of the data failed
     Align,
+    /// The platform cannot provide the requested NUMA policy semantics.
+    UnsupportedPolicy(NumaPolicy),
 }
 
 impl From<TopologyError> for MemoryError {
@@ -45,6 +50,9 @@ impl std::fmt::Display for MemoryError {
         match self {
             Self::InvalidSize => write!(f, "invalid memory mapping size"),
             Self::Align => write!(f, "memory mapping alignment failed"),
+            Self::UnsupportedPolicy(policy) => {
+                write!(f, "NUMA policy {policy:?} is unsupported on this platform")
+            }
             Self::UnknownNode(id) => write!(f, "unknown NUMA node {}", id.get()),
             Self::InvalidNodeId(id) => write!(f, "unrepresentable NUMA node {}", id.get()),
             Self::Os(error) => write!(f, "memory operation failed: {error}"),
@@ -71,4 +79,9 @@ pub enum NumaPolicy {
     /// Restricts future page allocations to the selected node when accepted.
     /// Applying this policy does not migrate pages that already exist.
     Bind(NumaNodeId),
+    /// Prefers the selected node, allowing allocation from other nodes.
+    ///
+    /// Linux uses MPOL_PREFERRED; Windows uses VirtualAllocExNuma. Pages are
+    /// allocated on demand, and this policy does not guarantee their residency.
+    Prefer(NumaNodeId),
 }

@@ -125,8 +125,12 @@ impl<T> MappedRegion<T> {
         known_nodes: &[NumaNodeId],
     ) -> Result<(), MemoryError> {
         match policy {
-            NumaPolicy::Bind(id) => {
+            NumaPolicy::Bind(id) | NumaPolicy::Prefer(id) => {
                 let mask = NodeMask::try_new(id, known_nodes)?;
+                let mode = match policy {
+                    NumaPolicy::Bind(_) => libc::MPOL_BIND,
+                    NumaPolicy::Prefer(_) => libc::MPOL_PREFERRED,
+                };
                 // SAFETY: self owns a live, page-aligned mapping. The mask is
                 // initialized, covers max_node - 1 bits (Linux decrements this
                 // argument before reading), and stays alive throughout
@@ -137,7 +141,7 @@ impl<T> MappedRegion<T> {
                         libc::SYS_mbind,
                         self.base,
                         self.mapped_len,
-                        libc::MPOL_BIND,
+                        mode,
                         mask.words.as_ptr(),
                         mask.max_node,
                         0 as libc::c_uint,
@@ -146,7 +150,7 @@ impl<T> MappedRegion<T> {
                 if result == -1 {
                     return Err(MemoryError::Os(std::io::Error::last_os_error()));
                 }
-                self.policy = Some(NumaPolicy::Bind(id));
+                self.policy = Some(policy);
             }
         };
 

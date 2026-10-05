@@ -1,14 +1,18 @@
 //! Emprunter un buffer NUMA depuis des tâches Weave, sans copier son stockage.
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "windows"))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(target_os = "linux")]
     use std::io;
     use weave::ThreadPoolBuilder;
     use weave::memory::{NumaPolicy, buffer::NumaBuffer};
+    #[cfg(target_os = "linux")]
     use weave::topology::NumaNodeId;
 
     // Choisir un nœud autorisé pour ce thread, sans supposer que le nœud 0 l'est.
+    #[cfg(target_os = "linux")]
     let status = std::fs::read_to_string("/proc/thread-self/status")?;
+    #[cfg(target_os = "linux")]
     let node = status
         .lines()
         .find_map(|line| line.strip_prefix("Mems_allowed_list:"))
@@ -18,7 +22,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     const LEN: usize = 10_003;
     const CHUNK_SIZE: usize = 1_024;
+    #[cfg(target_os = "linux")]
     let policy = NumaPolicy::Bind(NumaNodeId::new(node));
+    #[cfg(target_os = "windows")]
+    let policy = {
+        let topology = weave::topology::Topology::discover()?;
+        let node = topology
+            .numa_nodes()
+            .first()
+            .ok_or_else(|| std::io::Error::other("aucun nœud NUMA découvert"))?;
+        NumaPolicy::Prefer(node.id())
+    };
     let mut buffer = NumaBuffer::<u64>::try_new(LEN, policy)?;
     let pool = ThreadPoolBuilder::new().num_threads(4).try_build()?;
     let storage = buffer.as_slice().as_ptr();
@@ -54,12 +68,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     assert_eq!(buffer.policy(), policy);
-    println!("{LEN} valeurs traitées en place et vérifiées, politique Bind({node}).");
+    println!("{LEN} valeurs traitées en place et vérifiées, politique {policy:?}.");
     // L'exécution des tâches ne garantit pas leur proximité avec les pages.
     Ok(())
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "windows")))]
 fn main() {
-    eprintln!("Cet exemple nécessite Linux et la prise en charge de mbind.");
+    eprintln!("Cet exemple nécessite Linux ou Windows.");
 }
