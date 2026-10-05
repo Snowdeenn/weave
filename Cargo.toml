@@ -7,5 +7,13 @@ description = "Ergonomic work-stealing thread pool with parallel iterators"
 [dependencies]
 libc = "0.2.189"
 
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = [
+    "Win32_Foundation",
+    "Win32_System_SystemInformation",
+    "Win32_System_Threading",
+    "Win32_System_Memory",
+] }
+
 [features]
 scheduler-metrics = []

@@ -37,6 +37,11 @@ use std::collections::HashSet;
 #[cfg(target_os = "linux")]
 pub(crate) mod linux;
 
+#[cfg(target_os = "windows")]
+use windows_sys::Win32::System::SystemInformation as win_info;
+#[cfg(target_os = "windows")]
+pub(crate) mod windows;
+
 /// Operating-system identifier of a logical CPU.
 ///
 /// A logical CPU is an execution context visible to the operating system. Two
@@ -208,7 +213,13 @@ impl Topology {
             linux::discover_from(sysfs_root)
         }
 
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(target_os = "windows")]
+        {
+            let buffer = windows::build_buffer(win_info::RelationAll)?;
+            let parsed = windows::parse_buffer(buffer)?;
+            windows::discover_from(parsed)
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "windows")))]
         {
             Err(TopologyError::UnsupportedPlatform)
         }
@@ -259,6 +270,11 @@ impl Topology {
 /// errors preserve enough context to identify the failing file or relation.
 #[derive(Debug)]
 pub enum TopologyError {
+    /// A Windows topology operation failed or returned invalid data.
+    Windows {
+        /// Original Win32 error code.
+        code: u32,
+    },
     /// Hardware-topology discovery is not implemented for the current platform.
     UnsupportedPlatform,
     /// A Linux list of operating-system identifiers is malformed.
@@ -312,6 +328,7 @@ pub enum TopologyError {
 impl std::fmt::Display for TopologyError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Windows { code } => write!(f, "Windows topology error {code}"),
             Self::UnsupportedPlatform => {
                 write!(
                     f,
@@ -347,6 +364,13 @@ impl std::fmt::Display for TopologyError {
                 )
             }
         }
+    }
+}
+
+#[cfg(target_os = "windows")]
+impl From<windows_sys::Win32::Foundation::WIN32_ERROR> for TopologyError {
+    fn from(code: windows_sys::Win32::Foundation::WIN32_ERROR) -> Self {
+        Self::Windows { code }
     }
 }
 
